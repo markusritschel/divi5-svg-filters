@@ -1,0 +1,21 @@
+{
+  "name": "markusritschel/divi5-svg-filters",
+  "description": "SVG Filter Kit inside Divi 5's Filters options.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.6"
+  },
+  "scripts": {
+    "test": "phpunit"
+  },
+  "config": {
+    "platform": {
+      "php": "7.4.33"
+    },
+    "sort-packages": true
+  }
+}

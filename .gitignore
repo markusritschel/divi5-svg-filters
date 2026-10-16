@@ -1,0 +1,8 @@
+/vendor/
+/node_modules/
+/.phpunit.result.cache
+
+# Never commit Divi (licensed) or release zips
+*.zip
+/wp-content/
+/docker/divi/
