@@ -131,22 +131,35 @@ evidence (file:line in Divi's built code, screenshots, stored post_content).
 Each change is TDD'd in `tests/loader-test.php` and committed atomically in the
 kit. Release `v1.3.0` only after Markus approves the push/tag.
 
-- [ ] **Source hook:** `apply_filters( 'svgf_extra_sources', array() )` returns
-      arrays of `{id, markup, meta}`, merged into `svgf_collect()` after files.
-      ID collisions: file wins, extra skipped. Cache signature includes a hash of
-      the extras.
-- [ ] **Metadata accessor:** `svgf_filters()` returns per-ID
-      `{id, title, desc, category, tweaks[{selector, attr, default, hint}]}`
-      parsed from the _unstripped_ markup. The printed defs stay stripped.
-- [ ] **Extra defs hook:** `do_action( 'svgf_print_defs_extra' )` inside the
-      `<defs>` so the plugin can append tuned copies to the same SVG. The defs
-      SVG must print whenever extras exist, even if the kit's own markup is empty.
-- [ ] **Per-instance interactive JS:** `svg-filters.js` attaches spotlight/melt
-      per element. It reads the filter ID from `data-svgf-id` when present,
-      falls back to the shared ID, and moves only that filter's
-      `fePointLight`/turbulence. A `svgfAttach(el)` global lets the builder
-      re-attach. Demo page keeps working.
-- [ ] Update the kit README and CHANGELOG, bump `SVGF_VERSION` to 1.3.0.
+**Status:** done on kit branch `plugin-hooks` (worktree
+`~/Code/wp-svg-filters/.claude/worktrees/plugin-hooks`, commits `a18427b`,
+`786b845`, `17a751d`; not pushed, not tagged). Smoke-tested in the spike
+WordPress + Divi (23 filters printed, no `data-*`, no PHP notices). As built:
+
+- [x] **Source hook:** `apply_filters( 'svgf_extra_sources', array() )` returns
+      SVG/`<filter>` markup strings, collected after the files with the same
+      extraction (file IDs win, extras skipped). Cache signature includes a hash
+      of the extras.
+- [x] **Metadata accessor:** `svgf_filters()` returns per ID
+      `{id, title, desc, category, tweaks[{key, attr, default, hint}], markup}`
+      parsed from the _unstripped_ markup; `markup` is the stripped printable
+      `<filter>`. Tweak key: `#<id>|<attr>` or `<tag>[:n]|<attr>`.
+- [x] **Extra defs hook:** `apply_filters( 'svgf_extra_defs', '' )` (string)
+      inside the `<defs>`; the defs SVG prints when either the kit markup or the
+      extras are non-empty.
+- [x] **Per-instance interactive JS:** elements name their filter copy in
+      `data-svgf-spotlight="<id>"` / `data-svgf-melt="<id>"`; the
+      `fePointLight` / `feDisplacementMap` is looked up inside that filter by
+      tag. Delegated listeners on `document` replace a `svgfAttach()` global
+      (builder re-renders need nothing). Verified with an 11-check Chromium
+      script (`~/Code/divi5-svg-filters-spike/probe/check-interactive.mjs`),
+      touch taps included.
+- [x] Kit README and CHANGELOG updated, `SVGF_VERSION` 1.3.0.
+
+Consequence for Phase 4: spotlight and melt elements always get their own
+filter copy (even untuned) plus the data attribute, otherwise they share one
+light (goal 10). A theme copy of the kit older than 1.3.0 lacks the hooks:
+the plugin then offers only untuned kit filters and shows a notice.
 
 ## Phase 2 — Plugin skeleton and safety shell
 
