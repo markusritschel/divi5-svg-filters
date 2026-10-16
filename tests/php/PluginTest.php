@@ -1,0 +1,90 @@
+<?php
+/**
+ * Boot behaviour: Divi 5 detection, kit loading, theme copies, admin notices.
+ *
+ * @runTestsInSeparateProcesses
+ * @preserveGlobalState disabled
+ */
+
+use D5SVGF\Plugin;
+use PHPUnit\Framework\TestCase;
+
+final class PluginTest extends TestCase {
+
+	private const ROOT = __DIR__ . '/../../';
+
+	/** Load the plugin file and fire after_setup_theme, as WordPress would after the theme. */
+	private function boot( ?bool $divi5 ): void {
+		$GLOBALS['divi5_enabled'] = $divi5;
+		if ( null !== $divi5 ) {
+			require_once __DIR__ . '/fixtures/divi5-enabled.php';
+		}
+		require self::ROOT . 'divi5-svg-filters.php';
+		do_action( 'after_setup_theme' );
+	}
+
+	private function notices(): string {
+		ob_start();
+		do_action( 'admin_notices' );
+		return (string) ob_get_clean();
+	}
+
+	public function test_without_divi_5_it_loads_nothing_and_says_so(): void {
+		$this->boot( null );
+
+		$this->assertFalse( defined( 'SVGF_VERSION' ), 'kit not loaded' );
+		$this->assertSame( '', Plugin::kit_source() );
+		$this->assertFalse( Plugin::active() );
+		$this->assertStringContainsString( 'Divi 5', $this->notices() );
+	}
+
+	public function test_divi_5_disabled_by_filter_counts_as_absent(): void {
+		$this->boot( false );
+
+		$this->assertFalse( defined( 'SVGF_VERSION' ) );
+		$this->assertFalse( Plugin::active() );
+		$this->assertStringContainsString( 'Divi 5', $this->notices() );
+	}
+
+	public function test_with_divi_5_it_loads_the_bundled_kit(): void {
+		$this->boot( true );
+
+		$this->assertTrue( Plugin::active() );
+		$this->assertSame( 'plugin', Plugin::kit_source() );
+		$this->assertSame( realpath( self::ROOT . 'kit' ), realpath( SVGF_DIR ) );
+		$this->assertTrue( Plugin::kit_has_hooks() );
+		$this->assertSame( '', $this->notices() );
+	}
+
+	public function test_a_current_theme_copy_wins_and_is_reported(): void {
+		define( 'SVGF_VERSION', '1.3.0' );
+		define( 'SVGF_DIR', '/themes/child/svg-filters' );
+		$this->boot( true );
+
+		$this->assertSame( 'theme', Plugin::kit_source() );
+		$this->assertSame( '/themes/child/svg-filters', SVGF_DIR, 'bundled kit not loaded' );
+		$this->assertTrue( Plugin::kit_has_hooks() );
+		$this->assertStringContainsString( 'theme', $this->notices() );
+	}
+
+	public function test_an_old_theme_copy_disables_the_features_that_need_the_kit_hooks(): void {
+		define( 'SVGF_VERSION', '1.2.1' );
+		define( 'SVGF_DIR', '/themes/child/svg-filters' );
+		$this->boot( true );
+
+		$this->assertTrue( Plugin::active() );
+		$this->assertFalse( Plugin::kit_has_hooks() );
+		$this->assertStringContainsString( '1.2.1', $this->notices() );
+	}
+
+	public function test_notices_only_for_administrators_and_escaped(): void {
+		define( 'SVGF_VERSION', '1.2.1<b>' );
+		define( 'SVGF_DIR', '/themes/child/svg-filters' );
+		$this->boot( true );
+
+		$this->assertStringContainsString( '1.2.1&lt;b&gt;', $this->notices() );
+
+		$GLOBALS['current_user'] = array();
+		$this->assertSame( '', $this->notices() );
+	}
+}
