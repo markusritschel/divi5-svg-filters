@@ -75,3 +75,19 @@
   the Phase 6 admin warning.
 - 2026-10-16, Phase 4: an interactive filter set on a preset gets one copy
   per preset class, so elements sharing that preset share the light.
+- 2026-10-17, Phase 5: `svgTune` is keyed per filter
+  (`{ <filter id>: { <tweak key>: value } }`), so switching filters never
+  carries values over. No `package.json`: `node --test` and the UMD
+  `core.js` need no dependencies.
+- 2026-10-17, Phase 5: the builder reads selector templates from Divi's JS
+  module metadata and the module's own attrs from the edit-post store (both
+  differ from the server, see findings). Option-group presets are not part
+  of the builder preview yet.
+- 2026-10-17, Phase 6: uploads live in one autoloaded option
+  (`d5svgf_uploads`), not a custom post type: kses would strip SVG from post
+  content for users without `unfiltered_html`, and the list stays small.
+- 2026-10-17, Phase 6: upload IDs must not contain `--` (reserved for
+  copies; also prevents a clash with kit classes like `.fx-blur--bg`), max
+  64 characters. Files with a DOCTYPE or entities are rejected outright.
+- 2026-10-17, Phase 6: deleting asks for confirmation (browser dialog).
+  The import message does not list what the sanitizer removed.

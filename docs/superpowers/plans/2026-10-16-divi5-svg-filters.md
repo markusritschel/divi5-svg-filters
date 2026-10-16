@@ -269,6 +269,16 @@ Filters attr path, `desktop.value.{ svgFilter: 'fx-duotone', svgScope: 'element'
 
 ## Phase 5 — Visual Builder controls (revised after spike)
 
+**Status:** done (`ec95bfc` … `e4c0435`). `assets/core.js` (pure, 8
+`node --test` tests), `assets/builder.js`, `assets/builder.css`,
+`includes/Builder.php`. Verified in the spike builder
+(`probe/step-e2e-builder.mjs`): fields below Blend, preview identical to
+the frontend, live switch, tuning fold-out writing per-filter `svgTune`,
+background scope, spotlight attribute, module preset (own Divi filter still
+wins), saved state rendered the same on the frontend. Not covered: option
+group presets in the builder preview (frontend handles them), group preset
+saving through the preset UI, layout export/import.
+
 - [ ] `assets/builder.js` registered via
       `PackageBuildManager::register_package_build()` on
       `divi_visual_builder_assets_before_enqueue_scripts`, **app window only**
@@ -306,6 +316,13 @@ Filters attr path, `desktop.value.{ svgFilter: 'fx-duotone', svgScope: 'element'
       in the findings.
 
 ## Phase 6 — Custom uploads
+
+**Status:** done (`9992bdf` … `7776df9`). `includes/Sanitizer.php`,
+`includes/Uploads.php` (option, not a CPT), `includes/Admin.php`. 88 PHP
+tests. Verified in the spike (`probe/check-uploads.mjs`): import with a
+colliding ID skipped, hostile file reduced to clean primitives, tuned upload
+on the frontend and in the builder ("Custom"), `.my-glow` class, delete →
+element unfiltered + console warning + listed on the admin page.
 
 - [ ] Sanitizer test-first with a hostile fixture set: `<script>`, `on*`,
       `<foreignObject>`, `href`/`xlink:href`, `<image>`, external `url()`,
