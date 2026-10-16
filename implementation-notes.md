@@ -52,3 +52,26 @@
 - 2026-10-16, Phase 2: the spike WordPress now runs the plugin from this
   worktree (read-only mount in `wp-content/plugins/divi5-svg-filters`); the
   spike's own kit mu-plugin loader is disabled (`00-svg-filter-kit.php.off`).
+- 2026-10-16, Phase 3: filters without a known category (e.g. a theme's own
+  SVG files without metadata) go to "Custom", next to uploads. Text-type
+  tuning values must be number lists; other text values are ignored (all 47
+  kit hints qualify; uploads with non-numeric text hints cannot be tuned
+  there).
+- 2026-10-16, Phase 4: selectors use the order/preset class twice
+  (`.et_pb_text_0.et_pb_text_0`, after Divi's own prefix) so the rules beat
+  Divi's equal ones even if Divi's CSS loads later. To keep Divi's "later
+  layer wins" between presets and module, every later layer with Divi
+  filter values is restated with the raised selector (Divi's part only).
+  Found in the spike: without this, a preset's SVG filter overrode a
+  module's own Divi filter.
+- 2026-10-16, Phase 4: the background-scope positioning rule
+  (`position/isolation/overflow`) is wrapped in `:where()` so Divi's own
+  Position settings always win.
+- 2026-10-16, Phase 4: the Divi class guard runs on `init` (Divi's classes
+  autoload only then, verified), not at plugin load; failing it shows a
+  notice and leaves the frontend off.
+- 2026-10-16, Phase 4: missing filters are recorded in the option
+  `d5svgf_missing` (filter ID → post ID → time, written only on change) for
+  the Phase 6 admin warning.
+- 2026-10-16, Phase 4: an interactive filter set on a preset gets one copy
+  per preset class, so elements sharing that preset share the light.

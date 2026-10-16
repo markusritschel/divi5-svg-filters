@@ -194,6 +194,11 @@ and the notice shows; no PHP notices.
 
 ## Phase 3 — Filter registry (PHP, pure, heavily unit-tested)
 
+**Status:** done (`ef27ad3`, `8675ee3`): `includes/Tweaks.php` (hint →
+control, value validation) and `includes/Registry.php` (groups, exclusions,
+`copy()` with hash IDs and renamed inner IDs, salt for per-element copies).
+The `window.D5SVGF` export moves to Phase 5 together with the builder script.
+
 - [ ] `Registry::all()` merges `svgf_filters()` + DB uploads, minus `fx-liquid`
       (goal 9). Groups by category (`Color`, `Texture`, `Blur & distortion`,
       `Shape`, `Light & depth`, `Fill & compositing`, `Motion`, `Custom`).
@@ -206,6 +211,19 @@ and the notice shows; no PHP notices.
 - [ ] Exposed to JS as `window.D5SVGF = { filters, version }` via inline script.
 
 ## Phase 4 — Frontend rendering (revised after spike)
+
+**Status:** done (`55f6526`, `6a7e391`): `includes/Frontend.php`, started by
+`Plugin::start()` on `init` when `Frontend::supported()`. 53 unit tests
+green on PHP 8.5/7.4. Verified in the spike WordPress + Divi 5.15.1
+(`probe/check-frontend.mjs`, `probe/check-extra.mjs`, page Spike4): combined
+declaration at 1280/900/400 px + hover, tuned copy in the defs, background
+scope on `::before`, two spotlight elements with independent lights,
+sub-element, missing filter (Divi's values only + console warning), module
+preset, and a module's own Divi filter still replacing its preset's (as
+Divi does). Design additions beyond the plan, see the implementation notes:
+raised selectors with restated later layers, `:where()` for the background
+positioning rule. Option-group presets are implemented from Divi's code but
+not yet driven through the preset UI (Phase 5 E2E).
 
 Storage (confirmed, persists through builder save and presets): under each
 Filters attr path, `desktop.value.{ svgFilter: 'fx-duotone', svgScope: 'element'|'background', svgTune: { '<selector>|<attr>': value } }`.
