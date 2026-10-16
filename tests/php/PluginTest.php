@@ -95,6 +95,26 @@ final class PluginTest extends TestCase {
 		$this->assertStringContainsString( 'Divi version', $this->notices() );
 	}
 
+	public function test_uploads_feed_the_kit_and_appear_under_custom(): void {
+		require_once __DIR__ . '/fixtures/divi-fakes.php';
+		$GLOBALS['wp_options']['d5svgf_uploads'] = array( 'my-glow' => array( 'title' => 'Glow', 'markup' => '<filter id="my-glow" data-category="color"><title>Glow</title><feOffset dx="1"/></filter>' ) );
+		$this->boot( true );
+		do_action( 'init' );
+
+		$this->assertArrayHasKey( 'svgf_extra_sources', $GLOBALS['wp_hooks'] );
+		$this->assertArrayHasKey( 'admin_menu', $GLOBALS['wp_hooks'] );
+		$this->assertSame( array( 'my-glow' => 'Glow' ), Plugin::registry()->grouped()['Custom'] );
+	}
+
+	public function test_an_old_theme_kit_gets_no_uploads(): void {
+		define( 'SVGF_VERSION', '1.2.1' );
+		define( 'SVGF_DIR', '/themes/child/svg-filters' );
+		$this->boot( true );
+
+		$this->assertArrayNotHasKey( 'svgf_extra_sources', $GLOBALS['wp_hooks'] );
+		$this->assertArrayHasKey( 'admin_menu', $GLOBALS['wp_hooks'], 'the page still explains why' );
+	}
+
 	public function test_notices_only_for_administrators_and_escaped(): void {
 		define( 'SVGF_VERSION', '1.2.1<b>' );
 		define( 'SVGF_DIR', '/themes/child/svg-filters' );

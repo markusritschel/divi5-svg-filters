@@ -53,6 +53,15 @@ final class Plugin {
 		}
 
 		self::$active = true;
+
+		require_once D5SVGF_DIR . 'includes/Sanitizer.php';
+		require_once D5SVGF_DIR . 'includes/Uploads.php';
+		require_once D5SVGF_DIR . 'includes/Admin.php';
+		if ( self::kit_has_hooks() ) {
+			add_filter( 'svgf_extra_sources', array( Uploads::class, 'sources' ) );
+		}
+		Admin::register(); // also explains when uploads are off
+
 		add_action( 'init', array( __CLASS__, 'start' ), 20 ); // Divi's classes autoload only by init
 	}
 
@@ -71,9 +80,9 @@ final class Plugin {
 		( new Builder( array( __CLASS__, 'registry' ) ) )->register();
 	}
 
-	/** The filters on offer: the loaded kit's (uploads join in a later phase). */
+	/** The filters on offer: the loaded kit's, uploads under "Custom". */
 	public static function registry(): Registry {
-		return Registry::from_kit();
+		return Registry::from_kit( self::kit_has_hooks() ? Uploads::ids() : array() );
 	}
 
 	/** Divi 5 detected and the kit loaded. */
