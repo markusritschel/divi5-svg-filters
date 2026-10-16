@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <filter id="e2e-glow" x="-20%" y="-20%" width="140%" height="140%" data-category="light">
+    <title>E2E glow</title>
+    <desc>Soft outer glow.</desc>
+    <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" data-tweak-stdDeviation="[0, 20] Glow radius in px"/>
+    <feFlood flood-color="#ff3399" result="color" data-tweak-flood-color="Glow color"/>
+    <feComposite in="color" in2="blur" operator="in" result="glow"/>
+    <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="fx-duotone"><feOffset dx="2"/></filter>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" onload="alert('svg')">
+  <script>alert('script')</script>
+  <filter id="e2e-evil" onload="alert('filter')">
+    <feImage xlink:href="https://evil.example/x.png" result="img"/>
+    <feFlood flood-color="url(https://evil.example/c)" style="x:y" result="f"/>
+    <feOffset dx="3" dy="3"/>
+    <foreignObject><div xmlns="http://www.w3.org/1999/xhtml">x</div></foreignObject>
+  </filter>
+</svg>

@@ -1,5 +1,5 @@
 /vendor/
-/node_modules/
+node_modules/
 /.phpunit.result.cache
 
 # Never commit Divi (licensed) or release zips
