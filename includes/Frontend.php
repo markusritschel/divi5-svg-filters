@@ -230,7 +230,8 @@ final class Frontend {
 		}
 
 		$interactive = self::INTERACTIVE[ $svg ] ?? '';
-		$copy        = $this->registry()->copy( $svg, is_array( $value['svgTune'] ?? null ) ? $value['svgTune'] : array(), '' !== $interactive ? $class : '' );
+		$tune        = $value['svgTune'][ $svg ] ?? null; // tuning is kept per filter, so switching filters never carries values over
+		$copy        = $this->registry()->copy( $svg, is_array( $tune ) ? $tune : array(), '' !== $interactive ? $class : '' );
 		$filter_id   = $copy ? $copy['id'] : $svg;
 		if ( ! self::valid_class( $filter_id ) ) {
 			return false;

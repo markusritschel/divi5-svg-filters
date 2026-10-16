@@ -99,7 +99,7 @@ final class FrontendTest extends TestCase {
 	}
 
 	public function test_tuned_copy_goes_into_the_defs_and_the_rule_uses_it(): void {
-		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-duotone', 'svgTune' => array( 'feFuncR|tableValues' => '0.3 0.7' ) ) ) );
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-duotone', 'svgTune' => array( 'fx-duotone' => array( 'feFuncR|tableValues' => '0.3 0.7' ), 'fx-wave' => array( 'x|y' => '1' ) ) ) ) );
 		$footer = $this->footer();
 
 		$this->assertMatchesRegularExpression( '/<filter id="(fx-duotone--[0-9a-f]{8})"><feFuncR tableValues="0.3 0.7"\/><\/filter>/', $footer['defs'] );
@@ -107,8 +107,16 @@ final class FrontendTest extends TestCase {
 		$this->assertStringContainsString( '{filter:url(#' . $m[1] . ');}', $footer['out'] );
 	}
 
+	public function test_tuning_of_another_filter_does_not_carry_over(): void {
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-duotone', 'svgTune' => array( 'fx-blur' => array( 'feFuncR|tableValues' => '0.3 0.7' ) ) ) ) );
+		$footer = $this->footer();
+
+		$this->assertSame( '', $footer['defs'] );
+		$this->assertStringContainsString( '{filter:url(#fx-duotone);}', $footer['out'] );
+	}
+
 	public function test_copies_are_not_referenced_when_the_defs_never_printed(): void {
-		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-duotone', 'svgTune' => array( 'feFuncR|tableValues' => '0.3 0.7' ) ) ) );
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-duotone', 'svgTune' => array( 'fx-duotone' => array( 'feFuncR|tableValues' => '0.3 0.7' ), 'fx-wave' => array( 'x|y' => '1' ) ) ) ) );
 		$this->render( 'divi/text-1', self::filters( array( 'svgFilter' => 'fx-wave' ) ) );
 		$out = $this->footer( false )['out'];
 
