@@ -1,0 +1,61 @@
+/* SVG Filters for Divi 5 — settings panel (Visual Builder top window). */
+
+/* Divider above the SVG section inside Divi's Filters group. */
+.et-vb-field-divi-filters-svgFilter {
+  border-top: 1px solid rgba(127, 127, 127, 0.25);
+  margin-top: 8px;
+  padding-top: 16px;
+}
+
+.d5svgf-tune__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.d5svgf-tune__toggle,
+.d5svgf-tune__reset {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.d5svgf-tune__toggle {
+  font-weight: 600;
+  text-align: left;
+}
+
+.d5svgf-tune__reset {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.d5svgf-tune__body {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.d5svgf-tune__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.d5svgf-tune__range {
+  display: grid;
+  grid-template-columns: 1fr 72px auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.d5svgf-tune input[type="number"],
+.d5svgf-tune input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+}
