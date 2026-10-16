@@ -339,26 +339,41 @@ element unfiltered + console warning + listed on the admin page.
 
 ## Phase 7 — Release and updates
 
-- [ ] `.github/workflows/ci.yml`: phpunit + `node --test` on PHP 7.4/8.3.
-      No Docker, no Divi.
-- [ ] `release.yml` modelled on the kit's (tag = version check, `git archive`
-      zip with `export-ignore` for tests/e2e/docker).
-- [ ] Updater: Plugin Update Checker (YahnisElsts, MIT, vendored) pointed at
-      GitHub releases. The rejected alternative is our own `pre_set_site_transient_update_plugins`
-      code, more code to maintain for the same result.
+**Status:** done except the step that needs Markus (`e6d22a5`, `e4dc961`).
+The release build was simulated locally (`v0.1.0`: version check passes,
+`v9.9.9` is rejected; 254 KB zip without tests/docs/dev packages) and the
+zip was installed with `wp plugin install` in the spike: frontend, admin
+page and the builder E2E flow passed. The update checker registers and
+queries GitHub without errors (repo not there yet → no update).
+
+- [x] `.github/workflows/ci.yml`: phpunit on PHP 7.4/8.3, kit test,
+      `node --test`. No Docker, no Divi.
+- [x] `release.yml` modelled on the kit's (tag = header + constant check,
+      `git archive` with `export-ignore`, plus the runtime `vendor/`).
+- [x] Updater: Plugin Update Checker 5.x as a Composer runtime dependency
+      (shipped in the zip's `vendor/`, not committed), release asset regex.
 - [ ] **Ask Markus** before `gh repo create markusritschel/divi5-svg-filters --public`,
-      push and first tag.
+      push and first tag (and before pushing/tagging kit v1.3.0).
+
+Also added: `e2e/` (`a5aeae0`), the local browser tests (7 tests, green on a
+fresh environment and on a rerun).
 
 ## Phase 8 — Docs
 
-- [ ] README + AGENTS.md (overview, commands, architecture narrative, Known
-      Limitations). Docs site / WP.org readme are open for discussion (spec):
-      propose after v1, don't build now.
+- [x] README (users) + AGENTS.md (overview, commands, architecture narrative,
+      Known Limitations) + LICENSE (`27a61fe`). Docs site / WP.org readme
+      are open for discussion (spec): propose after v1, not built.
 
 ## Verification checklist (before calling v1 done)
 
-- [ ] All unit tests green; E2E green locally against Divi 5.15.1.
-- [ ] Deactivate plugin → pages render, no `url(#…)` left dangling.
-- [ ] Delete an upload in use → element unfiltered, console + admin warning.
-- [ ] Theme copy of kit present → single load, notice shown.
-- [ ] `git log --all -- '*Divi*'` and `git ls-files | grep -i divi` are empty.
+Checked 2026-10-17:
+
+- [x] All unit tests green (PHP 88 on 8.5 and 7.4, JS 8, kit loader); E2E
+      7/7 green locally against Divi 5.15.1.
+- [x] Deactivate plugin → page renders, 0 `url(#…)` references, Divi's own
+      filter rule intact.
+- [x] Delete an upload in use → element unfiltered, console + admin warning
+      (E2E "uploads").
+- [x] Kit copy loaded before the plugin → one defs block, combined rules
+      still work (notice: unit test `PluginTest`).
+- [x] No Divi theme files or zips anywhere in the git history.
