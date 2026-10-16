@@ -48,5 +48,14 @@ function get_queried_object_id() { return 42; }
 function plugin_dir_url( $file ) { return 'https://example.test/wp-content/plugins/divi5-svg-filters/'; }
 function wp_register_script( $handle, ...$a ) { $GLOBALS['wp_scripts'][ $handle ] = $a; return true; }
 function wp_add_inline_script( $handle, $js, $position = 'after' ) { $GLOBALS['wp_inline_scripts'][ $handle ][] = array( $position, $js ); return true; }
+function esc_attr( $text ) { return esc_html( $text ); }
+function esc_url( $url ) { return esc_html( $url ); }
+function admin_url( $path = '' ) { return 'https://example.test/wp-admin/' . $path; }
+function wp_nonce_field( $action ) { echo '<input type="hidden" name="_wpnonce" value="nonce-' . esc_attr( $action ) . '">'; }
+function get_edit_post_link( $id ) { return 'https://example.test/wp-admin/post.php?post=' . (int) $id . '&action=edit'; }
+function get_the_title( $id ) { return 'Page ' . (int) $id; }
+function delete_option( $name ) { unset( $GLOBALS['wp_options'][ $name ] ); return true; }
+function esc_html__( $text, $domain = "default" ) { return esc_html( $text ); }
+function get_current_user_id() { return 1; }
 
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
