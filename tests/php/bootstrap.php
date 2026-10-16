@@ -41,5 +41,9 @@ function wp_enqueue_style( ...$a ) {}
 function wp_register_style( ...$a ) {}
 function wp_enqueue_script( ...$a ) {}
 function wp_add_inline_style( $handle, $css ) {}
+function get_option( $name, $default = false ) { return $GLOBALS['wp_options'][ $name ] ?? $default; }
+function update_option( $name, $value, $autoload = null ) { $GLOBALS['wp_options'][ $name ] = $value; return true; }
+function wp_json_encode( $data ) { return json_encode( $data ); }
+function get_queried_object_id() { return 42; }
 
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
