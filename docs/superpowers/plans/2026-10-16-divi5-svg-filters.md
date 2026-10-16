@@ -13,10 +13,15 @@ answers, and each phase names the spike finding it depends on. If a finding
 differs, revise that phase before starting it (log the change under
 "Deviations" in `implementation-notes.md`).
 
-**Stack:** PHP ≥ 7.4 (confirm against Divi 5.15.1's `Requires PHP`; see 0.2).
-Plain JS on Divi's `window.vendor` packages, no build step, unless the spike
-proves JSX/bundling unavoidable (the rejected alternative is a `@wordpress/scripts`
-build, used only as a fallback). Tests: PHPUnit with Brain Monkey (no WP install) for PHP,
+**Status:** Phase 0 done (2026-10-16). All five risks resolved, see
+`docs/spike-findings.md`. Phases 4 and 5 are revised to the verified
+mechanisms.
+
+**Stack:** PHP ≥ 7.4, WP ≥ 6.0 (Divi 5.15.1's own requirements, confirmed).
+Plain JS on `window.vendor.React` / `window.vendor.wp.hooks` / `window.divi.*`,
+no build step (the spike built fields, a custom field component and the live
+preview with `React.createElement`; the rejected alternative is a
+`@wordpress/scripts` build). Tests: PHPUnit with Brain Monkey (no WP install) for PHP,
 `node --test` for pure JS helpers, Playwright + headless Chromium for local
 Docker E2E. pnpm for JS tooling, mise pins Node.
 
@@ -32,7 +37,12 @@ Docker E2E. pnpm for JS tooling, mise pins Node.
 
 ---
 
-## Phase 0 — Spike (throwaway, not committed except the findings doc)
+## Phase 0 — Spike (throwaway, not committed except the findings doc) — DONE
+
+Result: `docs/spike-findings.md`. Verdict per phase: 1–3 **go** unchanged,
+4 and 5 **revised** (below), 6–8 **go**. The environment stays in
+`~/Code/divi5-svg-filters-spike/` for the Phase 5 E2E tests
+(`docker compose -p d5svgf-spike up -d`, port 8085, admin/admin).
 
 Location: `~/Code/divi5-svg-filters-spike/` (outside the repo). Output:
 `docs/spike-findings.md` in the repo (committed), one section per risk with
@@ -40,78 +50,78 @@ evidence (file:line in Divi's built code, screenshots, stored post_content).
 
 ### 0.1 Environment
 
-- [ ] `docker-compose.yml` with `wordpress:php8.2-apache` + `mariadb:11`, port
+- [x] `docker-compose.yml` with `wordpress:php8.2-apache` + `mariadb:11`, port
       8085; volume-mount `./wp-content`. Use `wordpress:cli` for WP-CLI.
-- [ ] `wp core install`, admin/admin, permalinks `/%postname%/`.
-- [ ] `unzip ~/Projekte/webdesign/Divi/Divi.zip -d wp-content/themes/` and
+- [x] `wp core install`, admin/admin, permalinks `/%postname%/`.
+- [x] `unzip ~/Projekte/webdesign/Divi/Divi.zip -d wp-content/themes/` and
       `wp theme activate Divi`. Confirm the version is 5.15.1 (`style.css` header).
-- [ ] Mount the kit read-only as a mu-plugin:
+- [x] Mount the kit read-only as a mu-plugin:
       `~/Code/wp-svg-filters → wp-content/mu-plugins/svg-filters/` plus a
       one-line loader. This proves the kit runs in plugin context (`svgf_url`
       falls back to `plugins_url`).
-- [ ] Playwright script `login.mjs`: logs in, opens a page in the Visual Builder
+- [x] Playwright script `login.mjs`: logs in, opens a page in the Visual Builder
       (`?et_fb=1`), saves `storageState` for reuse.
 
 ### 0.2 Facts to record before probing
 
-- [ ] Divi's `Requires PHP` / `Requires at least` → plugin headers.
-- [ ] Locate in the extracted theme: `Filters::value()`,
+- [x] Divi's `Requires PHP` / `Requires at least` → plugin headers.
+- [x] Locate in the extracted theme: `Filters::value()`,
       `ModuleUtils::use_attr_value`, `divi_module_wrapper_render`,
       `divi.module.options.filters.group.fields`, `PackageBuildManager`.
       Record file paths and signatures.
 
 ### 0.3 Risk 3 first — persistence (cheapest kill-switch)
 
-- [ ] Probe mu-plugin: on `divi_visual_builder_assets_before_enqueue_scripts`,
+- [x] Probe mu-plugin: on `divi_visual_builder_assets_before_enqueue_scripts`,
       register a JS file that hooks `divi.module.options.filters.group.fields`
       and appends a plain text field with `subName: 'svgFilter'`.
-- [ ] In the builder: set the value on a Text module, a Section, and a
+- [x] In the builder: set the value on a Text module, a Section, and a
       sub-element (Text → Toggle Options → Filters). Save.
-- [ ] `wp post get <id> --field=post_content` → is `svgFilter` stored under
+- [x] `wp post get <id> --field=post_content` → is `svgFilter` stored under
       `…decoration.filters.desktop.value.svgFilter`? Does it survive a reload,
       export/import of the layout, and saving as an element preset and an
       option-group preset (`wp option get et_divi_builder_global_presets_d5`
       or the 5.15.1 equivalent)?
-- [ ] **Gate:** if Divi strips unknown sub-values, stop. Fallback to evaluate:
+- [x] **Gate:** if Divi strips unknown sub-values, stop. Fallback to evaluate:
       store under a sibling attribute registered via
       `divi.moduleLibrary.moduleAttributes`. Before continuing, update the spec
       with Markus's approval (presets requirement 11 is at stake).
 
 ### 0.4 Risk 4 — field components and fold-out
 
-- [ ] Enumerate `window.divi.fieldLibrary` / `window.divi.modules` exports
+- [x] Enumerate `window.divi.fieldLibrary` / `window.divi.modules` exports
       in the builder console. Find the components for select (with optgroups),
       button group / segmented toggle, range with unit, color picker (hex only,
       no global colors), text, and a collapsible container.
-- [ ] Prove: the fields render below "Blend" under a divider, and fields can be
+- [x] Prove: the fields render below "Blend" under a divider, and fields can be
       conditionally visible based on `svgFilter` (Divi's `visible` callback vs.
       own React state).
 
 ### 0.5 Risk 1 — sub-element selector
 
-- [ ] Set Divi Saturate on a Text module's sub-element filters, then read the
+- [x] Set Divi Saturate on a Text module's sub-element filters, then read the
       selector in the frontend `<style>` (`#et-boc .et_pb_text_0 …`).
       Determine how to derive it in PHP from the module's style declaration
       args (likely `selector` passed alongside `attrName`).
 
 ### 0.6 Risk 2 — responsive/hover inheritance
 
-- [ ] Set desktop blur, tablet saturate, hover brightness. Compare Divi's CSS
+- [x] Set desktop blur, tablet saturate, hover brightness. Compare Divi's CSS
       output with `Filters::value()` called per breakpoint/state through
       `ModuleUtils::use_attr_value`. Record the exact media queries and
       `:hover` selectors Divi emits.
 
 ### 0.7 Risk 5 — builder iframe injection
 
-- [ ] Find the app iframe (`#et-vb-app-frame` or 5.15.1 equivalent). Prove that a
+- [x] Find the app iframe (`#et-vb-app-frame` or 5.15.1 equivalent). Prove that a
       `<svg><defs>` injected from the top window renders `url(#fx-duotone)` inside it,
       and that a `<style>` injected there updates live. Alternative: is the kit's
       `wp_footer` output already present in the iframe (it is a frontend render)?
 
 ### 0.8 Wrap-up
 
-- [ ] Write `docs/spike-findings.md`. Mark each phase below **go / revise**.
-- [ ] Commit only the findings doc (+ screenshots ≤ 200 KB). Verify no Divi
+- [x] Write `docs/spike-findings.md`. Mark each phase below **go / revise**.
+- [x] Commit only the findings doc (+ screenshots ≤ 200 KB). Verify no Divi
       code is quoted beyond short signatures.
 
 ---
@@ -175,43 +185,87 @@ docker/                    compose file for E2E (no Divi inside)
       Untuned or default-equal → shared ID.
 - [ ] Exposed to JS as `window.D5SVGF = { filters, version }` via inline script.
 
-## Phase 4 — Frontend rendering (depends on spike 0.3, 0.5, 0.6)
+## Phase 4 — Frontend rendering (revised after spike)
 
-Storage (assumed, confirm in 0.3): under each Filters attr path,
-`desktop.value.{ svgFilter: 'fx-duotone', svgScope: 'element'|'background', svgTune: { '<selector>|<attr>': value } }`.
+Storage (confirmed, persists through builder save and presets): under each
+Filters attr path, `desktop.value.{ svgFilter: 'fx-duotone', svgScope: 'element'|'background', svgTune: { '<selector>|<attr>': value } }`.
+`'none'`/empty = no filter.
 
 - [ ] **Guard test first:** if a referenced ID is not in the registry
       (deleted upload, kit filter removed), output nothing. Print a console
       warning via the inline script, and record it for the admin warning list.
-- [ ] Hook `divi_module_wrapper_render` (or the finding from 0.5). Walk the
-      module's attrs for Filters groups with `svgFilter`. For each, compute the
-      selector and emit per breakpoint/state:
-      `filter: url(#ID) <Filters::value(divi part)>`, reproducing Divi's own
-      media queries/hover as recorded in 0.6. Print to a collected style block
-      in `wp_footer` priority 2, _after_ defs are known to print.
+- [ ] `Css::rules( $attr, $selector, $svg_id )` (pure, unit-tested with
+      captured attr fixtures): calls Divi's
+      `Utils::style_statements( [ selectors => [desktop => [value => $selector]], attr, returnType => 'string', declarationFunction ] )`.
+      The declaration function resolves via
+      `ModuleUtils::use_attr_value( … 'getAndInheritAll' … )` and returns
+      `filter:url(#ID) <Filters::value( resolved, Divi's map )>;`. This emits
+      exactly Divi's breakpoints/states (spike: identical computed values at
+      1280/900/400 px + hover). Copy Divi's 8-entry function map into a
+      constant with a test that fails if `Filters::style_declaration` gains
+      keys (string scan of the class file in the E2E env).
+- [ ] Hook `divi_module_wrapper_render( $html, $args )`. For each Filters attr
+      in `$args['attrs']` with `svgFilter`, resolve the selector: element name
+      = first path segment (`module`, `content`, …), selector =
+      `WP_Block_Type_Registry` → `attributes[element]['selector']`, with
+      `{{selector}}` → `.` . `ModuleUtils::get_module_order_class_name( $id, $storeInstance )`.
+      Non-string selector or missing class → skip (guiding rule). Collect
+      rules and print them in `wp_footer` (after Divi's head styles, so equal
+      selectors win), only for IDs whose defs are guaranteed printed.
 - [ ] Scope `background`: reuse the kit's `--bg` mechanics. Add class
       `fx-<id>--bg` for untuned filters. For tuned copies, generate the
-      equivalent `::before` + parallax rules for the unique ID.
+      equivalent `::before` + parallax rules for the unique ID. Divi's own
+      values stay on the element rule (combined declaration only for scope
+      `element`).
 - [ ] Tuned copies appended through `svgf_print_defs_extra`. Dedupe by ID.
 - [ ] Spotlight/melt: add `data-svgf-id` to the wrapper so the kit JS
       attaches per instance.
-- [ ] Presets: resolve preset attrs the same way Divi does before reading
-      `svgFilter` (method from 0.3). Unit-test with a captured preset fixture.
+- [ ] Presets: `$args['attrs']` carries **no** preset values. Resolve
+      `GlobalPreset::get_selected_preset()` (module preset stack via
+      `modulePreset`) and `get_selected_group_presets()`; emit rules for the
+      preset class `preset--module--<module>--<id>` from the preset's attrs
+      (merged `styleAttrs` as Divi does). Follow Divi's replace rule: the
+      module rule uses only the module's own `svgFilter` (pending Markus's
+      decision, see findings "Presets"). Unit-test with the spike's preset
+      fixture.
 
-## Phase 5 — Visual Builder controls (depends on 0.4, 0.7)
+## Phase 5 — Visual Builder controls (revised after spike)
 
-- [ ] `assets/builder.js` registered via `PackageBuildManager` on
-      `divi_visual_builder_assets_before_enqueue_scripts`, depending on
-      `divi-vendor-wp-hooks`. Every hook callback is wrapped in `try/catch`
-      and returns the input unchanged on error.
-- [ ] Fields hook: append divider, grouped select (`None` + categories),
-      scope toggle (visible when a filter is chosen), fold-out
-      "▸ Tune ‹name› (n values)" with generated controls.
-- [ ] Live preview: inject defs + tuned copies into the app iframe and build the
-      combined declaration in JS (port of Phase 4 logic, unit-tested in
-      `tests/js/combine.test.mjs` against the same fixtures as PHP).
-- [ ] E2E (local Docker): choose duotone on Text, tune, save. The frontend CSS
-      matches the builder computed style.
+- [ ] `assets/builder.js` registered via
+      `PackageBuildManager::register_package_build()` on
+      `divi_visual_builder_assets_before_enqueue_scripts`, **app window only**
+      (`enqueue_top_window => false`), deps
+      `divi-vendor-wp-hooks`, `divi-field-library`, `divi-module` (without the
+      latter two the script runs before `window.divi.fieldLibrary` exists).
+      Every hook callback is wrapped in `try/catch` and returns its input
+      unchanged on error.
+- [ ] Fields hook `divi.module.options.filters.group.fields`: append after
+      `blendMode`, copying Divi's field shape (`groupName: 'divi/filters'`,
+      `category: 'layout'`, `features: {hover: false, sticky: false, responsive: false}`):
+      `svgFilter` → `divi/select` with grouped options
+      `{none, <category>: {label, options}}`; `svgScope` →
+      `divi/button-options` (Element / Background only); `svgTune` → own
+      component. `visible: (e) => hasFilter(e.attr)` for scope and tune.
+      Divider: a label-only field or CSS on the first field (check visually).
+- [ ] Fold-out: `window.divi.fieldLibrary.registerFieldComponent({ name: 'd5svgf/tune', component })`.
+      Plain `React.createElement`: caret header "▸ Tune ‹name› (n values)",
+      body renders controls per tweak (Divi's range/color/text components
+      via `window.divi.fieldLibrary`, or plain inputs if their props prove
+      awkward), writes the whole object via `props.onChange({ inputValue })`.
+- [ ] Live preview: `divi.module.wrapper.render( element, ctx )` returns
+      `Fragment(element, <style>)` with the combined rules for
+      `.et_pb_<module>_<ctx.id>`, built with Divi's own JS
+      (`window.divi.module.StyleStatements` / `styleLibrary.filtersStyleDeclaration`)
+      instead of a port; presets via `window.divi.moduleUtils.getActiveModulePreset`.
+      Untuned defs are already in the app frame (kit `wp_footer`); tuned
+      copies go into one plugin-owned `<svg>` in the app document. Pure helpers
+      (rule string building, tune hashing) unit-tested in `tests/js/` against
+      the same fixtures as PHP.
+- [ ] E2E (local Docker, spike env): choose duotone on Text, tune, save. The
+      frontend CSS matches the builder computed style at 3 widths + hover;
+      also a section, a sub-element (`content`), a module preset and an
+      option-group preset saved through the preset UI. Use the selectors listed
+      in the findings.
 
 ## Phase 6 — Custom uploads
 
