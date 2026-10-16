@@ -173,17 +173,24 @@ tests/php/ tests/js/ e2e/  unit / unit / local-only browser tests
 docker/                    compose file for E2E (no Divi inside)
 ```
 
-- [ ] `git init` is done; add `AGENTS.md` (canonical) + `CLAUDE.md` (`@AGENTS.md`),
-      `.gitignore`, `composer.json` (phpunit, brain/monkey), `package.json`.
-- [ ] `git subtree add --prefix=kit git@github.com:markusritschel/wp-svg-filters main --squash`
-      (after the Phase 1 release).
-- [ ] Bootstrap test first: the plugin doesn't fatal when Divi is absent. It
-      registers nothing on the frontend and shows an admin notice. It also
-      doesn't fatal when `ET\Builder\…\Filters` is missing (class_exists guards).
-- [ ] Kit loading on `after_setup_theme` priority 20: if `SVGF_VERSION` is
-      already defined (theme copy), use it and add the "remove theme copy" notice.
-      Otherwise require `kit/svg-filters.php`.
-- [ ] Commit per step.
+**Status:** done (commits `e7b22ed` … `6aa6ee5`). 6 PHPUnit tests green on
+PHP 8.5 and 7.4; checked in the spike WordPress: with Divi the bundled kit
+loads from `plugins/divi5-svg-filters/kit/`, without Divi nothing is output
+and the notice shows; no PHP notices.
+
+- [x] `AGENTS.md` (canonical) + `CLAUDE.md` (`@AGENTS.md`), `.gitignore`,
+      `composer.json` (PHPUnit 9.6, platform PHP 7.4; no Brain Monkey, own
+      stubs in `tests/php/bootstrap.php`). `package.json` deferred to Phase 5
+      (no JS tooling needed before).
+- [x] `git subtree add --prefix=kit ~/Code/wp-svg-filters plugin-hooks --squash`
+      (local branch; re-point to GitHub after the kit release).
+- [x] Bootstrap test first: no Divi 5 (function missing or returning false)
+      → kit not loaded, admin notice. The `ET\Builder\…` class guards move to
+      Phase 4, where those classes are first used.
+- [x] Kit loading on `after_setup_theme` priority 20: an already loaded kit
+      (`SVGF_VERSION`) wins with a notice; older than 1.3.0 → second notice
+      and `Plugin::kit_has_hooks()` false. Otherwise require `kit/svg-filters.php`.
+- [x] Commit per step.
 
 ## Phase 3 — Filter registry (PHP, pure, heavily unit-tested)
 

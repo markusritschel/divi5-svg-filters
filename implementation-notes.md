@@ -39,3 +39,16 @@
   E2E suite in Phase 5.
 - 2026-10-16, Phase 1: the spike's compose file now mounts the kit worktree
   (`plugin-hooks`) instead of the kit checkout.
+- 2026-10-16, Phase 2: no Brain Monkey. Own WordPress stubs in
+  `tests/php/bootstrap.php` (like the kit's test); avoids Patchwork on PHP 8.5.
+  Composer runs via the `composer:2` Docker image (not installed locally).
+- 2026-10-16, Phase 2: kit subtree added from the local branch
+  `plugin-hooks`, not from GitHub `main` (v1.3.0 is not pushed yet).
+- 2026-10-16, Phase 2: without Divi 5 the plugin does not load the kit
+  either (spec: "does nothing on the frontend"), so `.fx-*` classes typed by
+  hand need Divi or a theme copy of the kit.
+- 2026-10-16, Phase 2: the duplicate-kit notice says "another copy, usually
+  from your theme", because a mu-plugin or other plugin can load it too.
+- 2026-10-16, Phase 2: the spike WordPress now runs the plugin from this
+  worktree (read-only mount in `wp-content/plugins/divi5-svg-filters`); the
+  spike's own kit mu-plugin loader is disabled (`00-svg-filter-kit.php.off`).
