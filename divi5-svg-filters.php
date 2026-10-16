@@ -10,6 +10,7 @@
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       divi5-svg-filters
+ * Update URI:        https://github.com/markusritschel/divi5-svg-filters
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -20,5 +21,12 @@ define( 'D5SVGF_DIR', plugin_dir_path( __FILE__ ) );
 define( 'D5SVGF_URL', plugin_dir_url( __FILE__ ) );
 
 require_once D5SVGF_DIR . 'includes/Plugin.php';
+require_once D5SVGF_DIR . 'includes/Updater.php';
+
+// Composer dependencies (Plugin Update Checker); absent in a plain git checkout.
+if ( is_readable( D5SVGF_DIR . 'vendor/autoload.php' ) ) {
+	require_once D5SVGF_DIR . 'vendor/autoload.php';
+}
 
 D5SVGF\Plugin::boot();
+D5SVGF\Updater::register(); // independent of Divi: updates keep working when Divi is off
