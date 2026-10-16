@@ -32,6 +32,9 @@ must render and look as it would without the plugin. Concretely:
 - An uploaded filter that is later deleted: elements using it fall back to no
   SVG filter.
 
+In addition, a warning could be printed to the console. Plus, show a warning in 
+the admin backend section of the SVG Filters plugin.
+
 ## Goals
 
 1. **Placement (decided by Markus):** the controls live **inside Divi's existing
@@ -89,6 +92,9 @@ must render and look as it would without the plugin. Concretely:
    handling), assets for glass and the interactive filters (spotlight, melt)
    are loaded. If a theme also contains a copy of the kit, only one loads (the
    kit's existing `SVGF_VERSION` guard).
+   This could be open for discussion at a later point if we encorporate the kit
+   entirely, making the plugin independent of the kit. But for now, that solution
+   sounds good.
 
 ## Decided after review (Markus)
 
@@ -104,11 +110,11 @@ must render and look as it would without the plugin. Concretely:
     the frontend as in the builder (including combined declaration and tuned
     filter copies).
 12. **Public GitHub repo with updates.** The repo
-    `markusritschel/divi5-svg-filters` is public (to be created only after
-    Markus's go). Installed sites get **automatic updates from GitHub
-    releases** (tag-triggered release zip, like the kit). CI runs PHP and JS
-    unit tests only; the Docker + Divi browser tests stay local, because the
-    licensed Divi zip must never reach CI or the repo.
+    `markusritschel/divi5-svg-filters` is public (to be created). Installed 
+    sites get **automatic updates from GitHub releases** (tag-triggered release 
+    zip, like the kit). CI runs PHP and JS unit tests only; the Docker + Divi 
+    browser tests stay local, because the licensed Divi zip must never reach 
+    CI or the repo.
 
 ## Calls made by Claude during review (check these)
 
@@ -126,7 +132,7 @@ must render and look as it would without the plugin. Concretely:
   accessor for the unstripped metadata (`<title>`, `data-*`) while the printed
   defs stay stripped, and interactive JS that can attach per instance.
 - **Uploaded filters also get `.fx-<id>` / `.fx-<id>--bg` classes**, like kit
-  filters, for hand use.
+  filters, for hand use. Check potential name clashes.
 - **Uploads keep SMIL animation**: `<animate>` and `<set>` are allowed when
   `attributeName` names an attribute of the parent primitive; no `href` /
   `xlink:href` anywhere. Inner IDs on primitives are kept but must be unique
@@ -139,7 +145,7 @@ must render and look as it would without the plugin. Concretely:
 
 ## Non-goals (v1)
 
-- Divi 4 or the classic builder.
+- Divi 4 or the classic builder. We build for Divi 5 only.
 - Responsive or hover variants of the SVG filter settings.
 - Storing filters in the Media Library or allowing SVG uploads there.
 - Editing filter markup in the admin (upload and delete only).
@@ -151,6 +157,7 @@ must render and look as it would without the plugin. Concretely:
 - **Glass / backdrop mode:** offer `fx-liquid` (and future backdrop filters)
   as a third "Apply to: Backdrop" option, with the Chromium-only refraction and
   frosted fallback the kit already implements.
+- The kit dependency (see comment about later discussion above).
 
 ## Constraints and known facts
 
@@ -219,3 +226,11 @@ must render and look as it would without the plugin. Concretely:
    **fold-out** inside a group.
 5. Injecting filter definitions and generated CSS into the **builder's app
    iframe** for live preview.
+
+
+## Documentation
+
+Consider a documentation of the plugin. One that showcases the plugin on a 
+github page, and also documentation for uploading the plugin to the wordpress
+plugin store.
+May be open for discussion.
