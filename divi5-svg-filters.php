@@ -17,6 +17,7 @@ defined( 'ABSPATH' ) || exit;
 define( 'D5SVGF_VERSION', '0.1.0' );
 define( 'D5SVGF_FILE', __FILE__ );
 define( 'D5SVGF_DIR', plugin_dir_path( __FILE__ ) );
+define( 'D5SVGF_URL', plugin_dir_url( __FILE__ ) );
 
 require_once D5SVGF_DIR . 'includes/Plugin.php';
 

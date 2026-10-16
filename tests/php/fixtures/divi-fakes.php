@@ -92,6 +92,14 @@ namespace ET\Builder\Packages\GlobalData {
 	}
 }
 
+namespace ET\Builder\VisualBuilder\Assets {
+	class PackageBuildManager {
+		public static function register_package_build( $params ) {
+			$GLOBALS['fake_package_builds'][] = $params;
+		}
+	}
+}
+
 namespace {
 	class WP_Block_Type_Registry {
 		public static function get_instance() { return new self(); }

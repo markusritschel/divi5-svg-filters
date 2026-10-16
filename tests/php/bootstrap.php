@@ -45,5 +45,8 @@ function get_option( $name, $default = false ) { return $GLOBALS['wp_options'][ 
 function update_option( $name, $value, $autoload = null ) { $GLOBALS['wp_options'][ $name ] = $value; return true; }
 function wp_json_encode( $data ) { return json_encode( $data ); }
 function get_queried_object_id() { return 42; }
+function plugin_dir_url( $file ) { return 'https://example.test/wp-content/plugins/divi5-svg-filters/'; }
+function wp_register_script( $handle, ...$a ) { $GLOBALS['wp_scripts'][ $handle ] = $a; return true; }
+function wp_add_inline_script( $handle, $js, $position = 'after' ) { $GLOBALS['wp_inline_scripts'][ $handle ][] = array( $position, $js ); return true; }
 
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
