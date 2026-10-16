@@ -360,14 +360,24 @@
     };
   }
 
+  /**
+   * The module's own attrs. In the builder, the wrapper hook's ctx.attrs already has the preset
+   * merged in (unlike the server's); the store keeps them apart, as the frontend does.
+   */
+  function ownAttrs(ctx) {
+    var store = vendor.wp.data && vendor.wp.data.select("divi/edit-post");
+    var mod = store && store.getModule ? store.getModule(ctx.id) : null;
+    return (mod && mod.props && mod.props.attrs) || ctx.attrs || {};
+  }
+
   /** The module preset as a layer (group presets: frontend only for now). */
-  function presetLayer(ctx) {
+  function presetLayer(ctx, attrs) {
     var utils = divi.moduleUtils;
     if (!utils.getActiveModulePreset || !utils.getPresetClassNameForModule)
       return null;
     var preset = utils.getActiveModulePreset({
       moduleName: ctx.name,
-      moduleAttrs: ctx.attrs,
+      moduleAttrs: attrs,
     });
     if (!preset || !preset.attrs) return null;
     var cls = utils.getPresetClassNameForModule(ctx.name, preset, null);
@@ -402,10 +412,11 @@
             : "";
         if (!order) return el;
 
+        var attrs = ownAttrs(ctx);
         var layers = [];
-        var preset = presetLayer(ctx);
+        var preset = presetLayer(ctx, attrs);
         if (preset) layers.push(preset);
-        layers.push({ cls: order, attrs: ctx.attrs || {}, shared: false });
+        layers.push({ cls: order, attrs: attrs, shared: false });
 
         var plan = core.plan({
           layers: layers,

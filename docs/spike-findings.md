@@ -127,6 +127,20 @@ flagged for Markus (presets + own Divi values, see risk 3b).
   the app iframe (it is a frontend render), so untuned filters need no
   injection; tuned copies are appended to the app document by the same script.
 
+### Found during implementation (Phase 5)
+
+- In the **builder**, `divi.module.wrapper.render`'s `ctx.attrs` already
+  has the module preset merged in; the server's `$args['attrs']` does not.
+  The module's own attrs are in
+  `wp.data.select('divi/edit-post').getModule(id).props.attrs`.
+- In the builder's app request, Divi's modules are **not** registered in
+  `WP_Block_Type_Registry` at asset-enqueue time; selector templates come
+  from `wp.data.select('divi/module-library').getModule(name).attributes`.
+- `window.divi.module.StyleStatements` (React component, same params as
+  PHP `style_statements`) renders inside a plain `<style>` element.
+- `React.cloneElement( element, { htmlAttrs } )` on the wrapper element adds
+  DOM attributes to the module wrapper (used for `data-svgf-spotlight`).
+
 ### Practical notes for later E2E tests
 
 - A page opens in the builder only with post meta `_et_pb_use_builder = on`
