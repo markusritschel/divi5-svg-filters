@@ -1,0 +1,48 @@
+# On a version tag (v1.2.3): build the plugin zip (with the runtime vendor/
+# for updates) and attach it to the GitHub release, created if missing.
+# Installed sites update from this asset (includes/Updater.php).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check that the tag matches the plugin version
+        run: |
+          header=$(sed -n 's/^ \* Version: *//p' divi5-svg-filters.php)
+          constant=$(sed -n "s/.*define( 'D5SVGF_VERSION', '\([^']*\)' );.*/\1/p" divi5-svg-filters.php)
+          if [ "v$header" != "$GITHUB_REF_NAME" ] || [ "v$constant" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match Version $header / D5SVGF_VERSION $constant"
+            exit 1
+          fi
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "7.4"
+          tools: composer:v2
+          coverage: none
+
+      - name: Build zip
+        run: |
+          composer install --no-dev --no-interaction --no-progress --optimize-autoloader
+          mkdir -p build/divi5-svg-filters
+          git archive "$GITHUB_REF_NAME" | tar -x -C build/divi5-svg-filters
+          cp -r vendor build/divi5-svg-filters/
+          (cd build && zip -qr "../divi5-svg-filters-$GITHUB_REF_NAME.zip" divi5-svg-filters)
+
+      - name: Attach to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+          gh release upload "$GITHUB_REF_NAME" "divi5-svg-filters-$GITHUB_REF_NAME.zip" --clobber
