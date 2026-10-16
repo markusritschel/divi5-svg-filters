@@ -77,6 +77,24 @@ final class PluginTest extends TestCase {
 		$this->assertStringContainsString( '1.2.1', $this->notices() );
 	}
 
+	public function test_frontend_starts_on_init_when_divi_has_the_needed_classes(): void {
+		require_once __DIR__ . '/fixtures/divi-fakes.php';
+		$this->boot( true );
+
+		$this->assertArrayNotHasKey( 'divi_module_wrapper_render', $GLOBALS['wp_hooks'], 'Divi classes load only by init' );
+		do_action( 'init' );
+		$this->assertArrayHasKey( 'divi_module_wrapper_render', $GLOBALS['wp_hooks'] );
+		$this->assertSame( '', $this->notices() );
+	}
+
+	public function test_unknown_divi_internals_switch_the_frontend_off_with_a_notice(): void {
+		$this->boot( true );
+		do_action( 'init' );
+
+		$this->assertArrayNotHasKey( 'divi_module_wrapper_render', $GLOBALS['wp_hooks'] );
+		$this->assertStringContainsString( 'Divi version', $this->notices() );
+	}
+
 	public function test_notices_only_for_administrators_and_escaped(): void {
 		define( 'SVGF_VERSION', '1.2.1<b>' );
 		define( 'SVGF_DIR', '/themes/child/svg-filters' );

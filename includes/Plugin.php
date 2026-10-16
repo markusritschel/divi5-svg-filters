@@ -53,6 +53,25 @@ final class Plugin {
 		}
 
 		self::$active = true;
+		add_action( 'init', array( __CLASS__, 'start' ), 20 ); // Divi's classes autoload only by init
+	}
+
+	/** Start the frontend if this Divi has the pieces it relies on. */
+	public static function start() {
+		require_once D5SVGF_DIR . 'includes/Tweaks.php';
+		require_once D5SVGF_DIR . 'includes/Registry.php';
+		require_once D5SVGF_DIR . 'includes/Frontend.php';
+
+		if ( ! Frontend::supported() ) {
+			self::$notices[] = __( 'SVG Filters for Divi 5 does not recognise this Divi version, so SVG filters chosen in the builder are not applied. Pages render as without the plugin; an update of the plugin should fix this.', 'divi5-svg-filters' );
+			return;
+		}
+		( new Frontend( array( __CLASS__, 'registry' ) ) )->register();
+	}
+
+	/** The filters on offer: the loaded kit's (uploads join in a later phase). */
+	public static function registry(): Registry {
+		return Registry::from_kit();
 	}
 
 	/** Divi 5 detected and the kit loaded. */
