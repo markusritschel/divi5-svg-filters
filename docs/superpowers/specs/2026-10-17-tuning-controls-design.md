@@ -1,6 +1,11 @@
 # Tuning controls — design addendum
 
-Date: 2026-10-17 · Status: building; Markus can veto any point marked **(veto?)**
+Date: 2026-10-17 · Status: implemented in plugin 0.3.0 / kit 1.4.0; Markus can veto any point marked **(veto?)**
+
+Found while building: Divi's color picker stores `rgba(…)` once the opacity
+is below 100 % (accepted and normalized); on the frontend Divi's block parser
+has already resolved `$variable(…)$` to `var(--gcid-…)` (accepted as well);
+unitless sliders need `defaultUnit: ''`, otherwise Divi shows px.
 Base spec: `2026-10-16-divi5-svg-filters-design.md` (goal 4, layout "A + C")
 
 ## Request (Markus, 2026-10-17)

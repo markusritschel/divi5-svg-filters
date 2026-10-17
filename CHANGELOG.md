@@ -4,6 +4,30 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.3.0]
+
+### Changed
+
+- Tuning values are regular Divi fields: short labels with the explanation
+  behind the info button, units in the field, Divi's numeric input and
+  color picker with global colors (they stay linked to the global color).
+- Duotone and Threshold are tuned with two colors; Posterize with level
+  counts plus darkest/brightest level; frequency pairs with two sliders;
+  Emboss with a 3×3 kernel grid.
+- The "▸ Tune" fold-out is replaced by a "Tune ‹filter›" heading with
+  presets and *Reset all*.
+- Bundles the SVG Filter Kit 1.4.0.
+
+### Added
+
+- Presets: Emboss (Emboss, Sharpen, Find edges, Soften), Inner shadow (Soft,
+  Hard, Wide, Top, Glow).
+
+### Note
+
+- Duotone/Threshold tunings saved with 0.1/0.2 no longer apply; other saved
+  values do.
+
 ## [0.2.1]
 
 ### Fixed

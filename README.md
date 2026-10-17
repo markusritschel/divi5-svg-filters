@@ -38,9 +38,14 @@ _Blend_ you find:
 - **Apply to** — _Element_ (the whole element, combined with Divi's filters)
   or _Background only_ (a filtered copy of the background behind the content;
   Divi's own filters stay on the element).
-- **▸ Tune … (n values)** — the filter's tunable values: sliders for numbers,
-  color pickers for colors, text fields for value lists. Tuned elements get
-  their own copy of the filter; untuned ones share the standard one.
+- **Tune ‹filter›** — the filter's tunable values as regular Divi fields:
+  sliders with units (px, deg, s), Divi's color picker (including your global
+  colors, which stay linked), pairs such as horizontal/vertical frequency,
+  level counts for Posterize, a 3×3 kernel for Emboss. The info button on a
+  field explains it in more detail. Some filters offer presets (Emboss: Sharpen,
+  Find edges, …; Inner shadow: Soft, Hard, Glow, …); *Reset all* returns to the
+  filter's defaults. Tuned elements get their own copy of the filter; untuned
+  ones share the standard one.
 
 Sub-elements (e.g. a Text module's text) get the same fields when you enable
 _Filters_ for them through Divi's _Toggle Options_. The SVG filter setting is
@@ -98,6 +103,10 @@ render with Divi's own filters only. Uploaded filters remain in the database
 - Pointer filters set through a preset share one light per preset.
 - Text-type tuning values must be number lists.
 - The import message does not list what the cleaning removed.
+- Tunings of Duotone and Threshold saved before 0.3.0 no longer apply (the
+  filters now use two colors); those elements show the default colors.
+- Bevel's light direction is a slider (no angle wheel yet); frequency pairs
+  are two sliders (no 2D pad yet).
 
 ## Development
 

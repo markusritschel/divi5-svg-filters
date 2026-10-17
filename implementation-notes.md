@@ -92,3 +92,11 @@
   64 characters. Files with a DOCTYPE or entities are rejected outright.
 - 2026-10-17, Phase 6: deleting asks for confirmation (browser dialog).
   The import message does not list what the sanitizer removed.
+- 2026-10-17, tuning controls (0.3.0, design addendum
+  `docs/superpowers/specs/2026-10-17-tuning-controls-design.md`): the "▸ Tune"
+  fold-out of layout "A + C" is replaced by a heading with presets (real
+  Divi fields cannot sit inside a custom fold-out; a stored open flag would
+  dirty the page). Duotone/Threshold get two color fields instead of the
+  three dual sliders Markus suggested. Global colors are now allowed
+  (revises the base spec's "plain hex only"). Angle wheel and 2D pad are
+  left for later.
