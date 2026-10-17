@@ -4,6 +4,14 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.6.0]
+
+### Changed
+
+- Film grain: one *Grain strength* slider instead of two coupled weights
+  (kit 1.7.0); tunings of the former two values no longer apply.
+- Bundles the SVG Filter Kit 1.7.0.
+
 ## [0.5.0]
 
 ### Added

@@ -111,6 +111,8 @@ render with Divi's own filters only. Uploaded filters remain in the database
   filters now use two colors); those elements show the default colors.
 - Posterize level counts set per channel with 0.3.0 no longer apply; choose
   *Each channel* and set them again (darkest/brightest carry over).
+- Film grain tunings saved before 0.6.0 no longer apply (one strength slider
+  replaces the two weights).
 
 ## Development
 
