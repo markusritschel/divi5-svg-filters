@@ -7,48 +7,45 @@
   padding-top: 16px;
 }
 
-.d5svgf-tune__head {
+/* "Tune ‹filter›" heading with presets and reset. */
+.d5svgf-tune-head__row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.d5svgf-tune__toggle,
-.d5svgf-tune__reset {
+.d5svgf-tune-head__title {
+  font-weight: 600;
+}
+
+.d5svgf-tune-head__reset {
   background: none;
   border: 0;
-  padding: 4px 0;
+  padding: 0;
   color: inherit;
   font: inherit;
+  opacity: 0.7;
+  text-decoration: underline;
   cursor: pointer;
 }
 
-.d5svgf-tune__toggle {
-  font-weight: 600;
-  text-align: left;
+.d5svgf-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.d5svgf-tune__reset {
-  opacity: 0.7;
-  text-decoration: underline;
-}
-
-.d5svgf-tune__body {
+/* 3×3 kernel grid. */
+.d5svgf-matrix {
   display: grid;
-  gap: 12px;
-  margin-top: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
 
-.d5svgf-tune__label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-/* Number lists (sliders use Divi's own range markup and styles). */
-.d5svgf-tune__row > input[type="text"] {
+.d5svgf-matrix input {
   width: 100%;
   box-sizing: border-box;
+  text-align: center;
 }
