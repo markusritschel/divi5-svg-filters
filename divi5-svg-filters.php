@@ -3,7 +3,7 @@
  * Plugin Name:       SVG Filters for Divi 5
  * Plugin URI:        https://github.com/markusritschel/divi5-svg-filters
  * Description:       Brings the SVG Filter Kit into Divi 5's Filters options: pick an SVG filter per element, apply it to the element or its background, tune it, and upload your own filters.
- * Version:           0.2.0
+ * Version:           0.2.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Markus Ritschel
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'D5SVGF_VERSION', '0.2.0' );
+define( 'D5SVGF_VERSION', '0.2.1' );
 define( 'D5SVGF_FILE', __FILE__ );
 define( 'D5SVGF_DIR', plugin_dir_path( __FILE__ ) );
 define( 'D5SVGF_URL', plugin_dir_url( __FILE__ ) );
