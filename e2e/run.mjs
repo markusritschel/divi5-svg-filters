@@ -263,6 +263,9 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     assert.equal(await angle.inputValue(), '179', 'slider follows the dial');
 
     await choose('fx-duotone');
+    const sepia = page.locator('.d5svgf-presets button', { hasText: 'Sepia' });
+    const swatchSvg = decodeURIComponent((await sepia.locator('img.d5svgf-presets__swatch').getAttribute('src')).replace('data:image/svg+xml,', ''));
+    assert.match(swatchSvg, /flood-color="#2e1d0f"/, 'preset swatch rendered with the preset');
     await page.locator('.d5svgf-presets button', { hasText: 'Sepia' }).click();
     await page.waitForTimeout(800);
     let duo = await copyOf();

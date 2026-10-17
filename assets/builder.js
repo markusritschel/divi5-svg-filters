@@ -448,11 +448,52 @@
                     write(core.presetFields(filter, presets[name]));
                   },
                 },
-                name,
+                // As an image: the builder's CSS for icons in buttons would restyle inline SVG.
+                h("img", {
+                  className: "d5svgf-presets__swatch",
+                  alt: "",
+                  width: 56,
+                  height: 36,
+                  src:
+                    "data:image/svg+xml," +
+                    encodeURIComponent(swatch(id, filter, presets[name], names.indexOf(name))),
+                }),
+                h("span", { className: "d5svgf-presets__name" }, name),
               );
             }),
           )
         : null,
+    );
+  }
+
+  /**
+   * Preview of a preset: a gradient tile with "Aa" (tones, edges and relief all show) through
+   * the filter with the preset's values, as SVG markup ('' if the filter does not parse).
+   */
+  function swatch(id, filter, preset, i) {
+    var pid = id + "--preview" + i;
+    var el = filterElement(
+      filter,
+      core.composeAll(filter, core.presetFields(filter, preset)),
+      pid,
+    );
+    if (!el) return "";
+    // Title and description would become the button's text.
+    Array.prototype.slice
+      .call(el.querySelectorAll("title, desc"))
+      .forEach(function (n) {
+        n.parentNode.removeChild(n);
+      });
+    return (
+      '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="36" viewBox="0 0 56 36" aria-hidden="true"><defs>' +
+      '<linearGradient id="' + pid + '-tones" x1="0" x2="1">' +
+      '<stop offset="0" stop-color="#1d2b64"/><stop offset=".55" stop-color="#e4572e"/><stop offset="1" stop-color="#f8e9a1"/>' +
+      "</linearGradient>" +
+      new XMLSerializer().serializeToString(el) +
+      '</defs><g filter="url(#' + pid + ')">' +
+      '<rect x="3" y="3" width="50" height="30" rx="5" fill="url(#' + pid + '-tones)"/>' +
+      '<text x="28" y="24" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="15" fill="#fff">Aa</text>' +
+      "</g></svg>"
     );
   }
 
@@ -754,13 +795,24 @@
     var newId = core.copyId(id, values, salt);
     if (document.getElementById(newId)) return { id: newId };
 
+    var el = filterElement(filter, values, newId);
+    if (!el) return null;
+    defsHost().appendChild(document.importNode(el, true));
+    return { id: newId };
+  }
+
+  /**
+   * The filter's <filter> with composed values applied (detached), or null. newId starts with
+   * the filter's ID; the rest is appended to inner IDs too.
+   */
+  function filterElement(filter, values, newId) {
     var doc = new DOMParser().parseFromString(
       '<svg xmlns="http://www.w3.org/2000/svg">' + filter.markup + "</svg>",
       "image/svg+xml",
     );
     var el = doc.querySelector("filter");
     if (!el || doc.querySelector("parsererror")) return null;
-    var suffix = newId.slice(id.length);
+    var suffix = newId.slice((el.getAttribute("id") || "").length);
     var seen = {};
     var prims = {};
     Array.prototype.forEach.call(el.getElementsByTagName("*"), function (p) {
@@ -790,8 +842,7 @@
         p.setAttribute("id", p.getAttribute("id") + suffix);
     });
     el.setAttribute("id", newId);
-    defsHost().appendChild(document.importNode(el, true));
-    return { id: newId };
+    return el;
   }
 
   /** Declaration: url(#id) (if any) in front of Divi's resolved filter functions. */

@@ -36,10 +36,37 @@
 }
 
 .d5svgf-presets {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
   gap: 6px;
   margin-top: 10px;
+}
+
+/* Divi's buttons are capped at 40px with overflow hidden: room for swatch and name. */
+.d5svgf-presets .et-vb-button.d5svgf-presets__button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  padding: 5px 4px;
+  line-height: 1.2;
+}
+
+.d5svgf-presets__swatch {
+  display: block;
+  width: 56px;
+  height: 36px;
+  border-radius: 4px;
+  background: repeating-conic-gradient(rgba(127, 127, 127, 0.18) 0 25%, transparent 0 50%) 0 0 / 8px 8px;
+}
+
+.d5svgf-presets .d5svgf-presets__name {
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: center;
 }
 
 /* Visually hidden keyboard input of the pad and the dial. */
