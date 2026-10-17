@@ -2,7 +2,10 @@
  * SVG Filters for Divi 5 — Visual Builder (app window).
  *
  * 1. Fields below "Blend" in every Filters group: SVG Filter (grouped select),
- *    Apply to (element / background only) and a "Tune" fold-out.
+ *    Apply to (element / background only), a "Tune ‹filter›" heading with
+ *    presets and reset, and the filter's tuning values as real Divi fields
+ *    (range with unit, color picker with global colors, text, a 3×3 matrix).
+ *    They write svgTune[<filter id>][<field key>] (see includes/Tweaks.php).
  * 2. Live preview: each module gets a <style> next to it with the same rules
  *    as the frontend (Divi's own StyleStatements, url(#id) in front of Divi's
  *    filter functions); tuned copies go into a plugin-owned <svg> defs block.
@@ -23,6 +26,14 @@
   var h = React.createElement;
   var I = D.i18n;
 
+  /** Display unit → a CSS property for which Divi's range field shows that unit (verified, Divi 5.15.1). */
+  var UNIT_PROPERTY = {
+    px: "filter:blur",
+    deg: "transform:rotate",
+    s: "transition-duration",
+    "%": "filter:opacity",
+  };
+
   function warn(where, err) {
     if (window.console) console.warn("[SVG Filters for Divi 5] " + where, err);
   }
@@ -32,6 +43,10 @@
     var v = attr && attr.desktop && attr.desktop.value;
     var id = v && typeof v.svgFilter === "string" ? v.svgFilter : "";
     return id && id !== "none" && D.filters[id] ? id : "";
+  }
+
+  function number(n) {
+    return String(Math.round(n * 1e6) / 1e6);
   }
 
   /* ---------- 1. Fields ---------- */
@@ -47,6 +62,136 @@
       options: options,
     };
   });
+
+  /** Divi fields for one filter's controls; visible only while that filter is chosen. */
+  function tuneFields(common, filterId) {
+    var filter = D.filters[filterId];
+    var visible = function (e) {
+      return filterOf(e && e.attr) === filterId;
+    };
+    var fields = [];
+    var field = function (
+      fieldKey,
+      label,
+      description,
+      dflt,
+      component,
+      features,
+    ) {
+      var tune = {};
+      tune[filterId] = {};
+      tune[filterId][fieldKey] = dflt;
+      fields.push(
+        Object.assign({}, common, {
+          subName: "svgTune." + filterId + "." + fieldKey,
+          label: label,
+          description: description || undefined,
+          defaultAttr: { desktop: { value: { svgTune: tune } } },
+          visible: visible,
+          features: Object.assign({}, common.features, features || {}),
+          component: component,
+        }),
+      );
+    };
+    var range = function (min, max, step, unit) {
+      var props = {
+        min: min,
+        max: max,
+        minLimit: min,
+        maxLimit: max,
+        cssSliderUI: true,
+      };
+      if (typeof step === "number") props.step = step;
+      if (UNIT_PROPERTY[unit]) props.cssProperty = UNIT_PROPERTY[unit];
+      else props.defaultUnit = ""; // without it Divi falls back to px
+      return { type: "field", name: "divi/range", props: props };
+    };
+    var withUnit = function (n, c) {
+      return number(n) + (UNIT_PROPERTY[c.unit] ? c.unit : "");
+    };
+
+    var levels = filter.controls.filter(function (c) {
+      return c.type === "levels";
+    });
+    filter.controls.forEach(function (c) {
+      switch (c.type) {
+        case "color":
+          field(
+            c.key,
+            c.label,
+            c.description,
+            c.default,
+            { type: "field", name: "divi/color-picker", props: {} },
+            { dynamicContent: { type: "color" } },
+          );
+          break;
+        case "range":
+          field(
+            c.key,
+            c.label,
+            c.description,
+            withUnit(c.default, c),
+            range(c.min, c.max, c.step, c.unit),
+          );
+          break;
+        case "pair":
+          field(
+            c.key + "@x",
+            c.label + " (" + I.horiz + ")",
+            c.description,
+            withUnit(c.default_x, c),
+            range(c.min, c.max, c.step, c.unit),
+          );
+          field(
+            c.key + "@y",
+            c.label + " (" + I.vert + ")",
+            "",
+            withUnit(c.default_y, c),
+            range(c.min, c.max, c.step, c.unit),
+          );
+          break;
+        case "levels":
+          field(
+            c.key + "@count",
+            c.label,
+            c.description,
+            String(c.count),
+            range(2, 10, 1, ""),
+          );
+          if (c === levels[levels.length - 1]) {
+            field(
+              "@min",
+              I.darkest,
+              I.levelsDesc,
+              number(c.lo),
+              range(0, 1, 0.01, ""),
+            );
+            field(
+              "@max",
+              I.brightest,
+              I.levelsDesc,
+              number(c.hi),
+              range(0, 1, 0.01, ""),
+            );
+          }
+          break;
+        case "matrix":
+          field(c.key, c.label, c.description, c.default, {
+            type: "field",
+            name: "d5svgf/matrix",
+            props: { fallback: c.default },
+          });
+          break;
+        default:
+          field(c.key, c.label, c.description, c.default, {
+            type: "field",
+            name: "divi/text",
+            props: {},
+          });
+      }
+    });
+    return fields;
+  }
 
   hooks.addFilter(
     "divi.module.options.filters.group.fields",
@@ -92,14 +237,19 @@
             },
           },
         });
-        out.svgTune = Object.assign({}, common, {
+        out.svgTuneHead = Object.assign({}, common, {
           subName: "svgTune",
           label: "",
           visible: function (e) {
             var id = filterOf(e && e.attr);
             return !!id && D.filters[id].controls.length > 0;
           },
-          component: { type: "field", name: "d5svgf/tune", props: {} },
+          component: { type: "field", name: "d5svgf/tune-head", props: {} },
+        });
+        Object.keys(D.filters).forEach(function (filterId) {
+          tuneFields(common, filterId).forEach(function (f, i) {
+            out["d5svgfTune_" + filterId + "_" + i] = f;
+          });
         });
         return out;
       } catch (err) {
@@ -109,172 +259,41 @@
     },
   );
 
-  /* ---------- Tune fold-out ---------- */
-
-  function sprintf(format, a, b) {
-    return format.replace("%1$s", a).replace("%2$d", b);
-  }
-
-  function Control(props) {
-    var c = props.control;
-    var current =
-      props.value !== undefined
-        ? String(props.value)
-        : String(c.type === "range" ? c.default + c.unit : c.default);
-    var label = h(
-      "label",
-      { className: "d5svgf-tune__label", title: c.attr },
-      c.label,
-    );
-
-    if (c.type === "color") {
-      return h(
-        "div",
-        { className: "d5svgf-tune__row" },
-        label,
-        h("input", {
-          type: "color",
-          value: current,
-          onChange: function (e) {
-            props.onSet(e.target.value);
-          },
-        }),
-      );
-    }
-    if (c.type === "range") {
-      var num = parseFloat(current);
-      var commit = function (e) {
-        props.onSet(e.target.value);
-      };
-      // Same markup and classes as Divi's own range field, so Divi's stylesheet (light and dark
-      // panel) styles it. The number is a text field like Divi's: no locale decimal comma.
-      return h(
-        "div",
-        { className: "d5svgf-tune__row" },
-        label,
-        h(
-          "div",
-          {
-            className:
-              "et-vb-field-input-range-container et-vb-field-input-range-container--has-unit-picker-slider",
-          },
-          h("input", {
-            type: "range",
-            className: "et-vb-field-input et-vb-field-input-range",
-            min: c.min,
-            max: c.max,
-            step: c.step,
-            value: num,
-            onChange: commit,
-          }),
-          h(
-            "div",
-            { className: "et-vb-field-input-css-numeric-container et-vb-field-input-range-text" },
-            h(
-              "div",
-              { className: "et-vb-settings-option--numeric-spinner-control et-vb-field-input-css-numeric-text" },
-              h(
-                "div",
-                { className: "et-vb-numeric-input" },
-                h(
-                  "div",
-                  { className: "et-vb-numeric-input-text" },
-                  h("input", {
-                    type: "text",
-                    key: String(num), // re-render with the slider's value
-                    defaultValue: String(num),
-                    inputMode: "decimal",
-                    spellCheck: false,
-                    onBlur: commit,
-                    onKeyDown: function (e) {
-                      if (e.key === "Enter") commit(e);
-                    },
-                  }),
-                ),
-                c.unit
-                  ? h(
-                      "div",
-                      { className: "et-vb-numeric-input-value-label" },
-                      h("span", { className: "et-vb-numeric-input-value-unit" }, c.unit),
-                    )
-                  : null,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    // Number lists: write on blur/Enter, so typing is not interrupted by validation.
-    return h(
-      "div",
-      { className: "d5svgf-tune__row" },
-      label,
-      h("input", {
-        type: "text",
-        className: "et-vb-field-input et-vb-field-input-text", // Divi's own input look
-        defaultValue: current,
-        spellCheck: false,
-        onBlur: function (e) {
-          props.onSet(e.target.value);
-        },
-        onKeyDown: function (e) {
-          if (e.key === "Enter") props.onSet(e.target.value);
-        },
-      }),
-    );
-  }
-
-  function Tune(props) {
-    var state = React.useState(false);
-    var open = state[0];
-    var setOpen = state[1];
+  /** "Tune ‹filter›" heading: presets and "Reset all" (writes the whole svgTune). */
+  function TuneHead(props) {
     var id = filterOf(props.attr);
     var filter = id && D.filters[id];
-    if (!filter || !filter.controls.length) return null;
-
+    if (!filter) return null;
     var all = props.value && typeof props.value === "object" ? props.value : {};
-    var mine = all[id] && typeof all[id] === "object" ? all[id] : {};
-
-    function write(next) {
+    var mine =
+      all[id] && typeof all[id] === "object" && Object.keys(all[id]).length
+        ? all[id]
+        : null;
+    var write = function (next) {
       var out = Object.assign({}, all);
-      if (next && Object.keys(next).length) out[id] = next;
+      if (next) out[id] = next;
       else delete out[id];
       props.onChange({ inputValue: out });
-    }
-    function set(control, raw) {
-      var next = Object.assign({}, mine);
-      var v = core.sanitize(control, raw);
-      if (v === null) return; // invalid input: keep the stored value
-      if (core.isDefault(control, v)) delete next[control.key];
-      else next[control.key] = v;
-      write(next);
-    }
-
+    };
+    var presets = filter.presets || {};
+    var names = Object.keys(presets);
     return h(
       "div",
-      { className: "d5svgf-tune" + (open ? " d5svgf-tune--open" : "") },
+      { className: "d5svgf-tune-head" },
       h(
         "div",
-        { className: "d5svgf-tune__head" },
+        { className: "d5svgf-tune-head__row" },
         h(
-          "button",
-          {
-            type: "button",
-            className: "d5svgf-tune__toggle",
-            "aria-expanded": open,
-            onClick: function () {
-              setOpen(!open);
-            },
-          },
-          (open ? "▾ " : "▸ ") +
-            sprintf(I.tune, filter.label, filter.controls.length),
+          "span",
+          { className: "d5svgf-tune-head__title" },
+          I.tune.replace("%s", filter.label),
         ),
-        Object.keys(mine).length
+        mine
           ? h(
               "button",
               {
                 type: "button",
-                className: "d5svgf-tune__reset",
+                className: "d5svgf-tune-head__reset",
                 onClick: function () {
                   write(null);
                 },
@@ -283,32 +302,86 @@
             )
           : null,
       ),
-      open
+      names.length
         ? h(
             "div",
-            { className: "d5svgf-tune__body" },
-            filter.controls.map(function (c) {
-              return h(Control, {
-                key: id + "|" + c.key,
-                control: c,
-                value: mine[c.key],
-                onSet: function (v) {
-                  set(c, v);
+            {
+              className: "d5svgf-presets",
+              role: "group",
+              "aria-label": I.presets,
+            },
+            names.map(function (name) {
+              return h(
+                "button",
+                {
+                  key: name,
+                  type: "button",
+                  className:
+                    "et-vb-button et-vb-button--secondary d5svgf-presets__button",
+                  onClick: function () {
+                    write(core.presetFields(filter, presets[name]));
+                  },
                 },
-              });
+                name,
+              );
             }),
           )
         : null,
     );
   }
 
+  /** 3×3 kernel as nine number fields; writes the row-by-row list. */
+  function Matrix(props) {
+    var raw =
+      typeof props.value === "string" && props.value.trim()
+        ? props.value
+        : props.fallback || "0 0 0 0 1 0 0 0 0";
+    var cells = raw
+      .trim()
+      .split(/[\s,]+/)
+      .slice(0, 9);
+    while (cells.length < 9) cells.push("0");
+    var commit = function (i, value) {
+      var next = cells.slice();
+      next[i] = String(value).trim() || "0";
+      if (next.join(" ") !== cells.join(" "))
+        props.onChange({ inputValue: next.join(" ") });
+    };
+    return h(
+      "div",
+      { className: "d5svgf-matrix", key: raw },
+      cells.map(function (v, i) {
+        return h("input", {
+          key: i,
+          type: "text",
+          inputMode: "decimal",
+          spellCheck: false,
+          className: "et-vb-field-input et-vb-field-input-text",
+          defaultValue: v,
+          "aria-label":
+            "Row " + (Math.floor(i / 3) + 1) + ", column " + ((i % 3) + 1),
+          onBlur: function (e) {
+            commit(i, e.target.value);
+          },
+          onKeyDown: function (e) {
+            if (e.key === "Enter") commit(i, e.target.value);
+          },
+        });
+      }),
+    );
+  }
+
   try {
     divi.fieldLibrary.registerFieldComponent({
-      name: "d5svgf/tune",
-      component: Tune,
+      name: "d5svgf/tune-head",
+      component: TuneHead,
+    });
+    divi.fieldLibrary.registerFieldComponent({
+      name: "d5svgf/matrix",
+      component: Matrix,
     });
   } catch (err) {
-    warn("tune component", err);
+    warn("field components", err);
   }
 
   /* ---------- 2. Live preview ---------- */
@@ -329,10 +402,10 @@
     return defs;
   }
 
-  /** Tuned / per-element copy in the app document (same primitive keys as the PHP Registry::copy). */
+  /** Tuned / per-element copy in the app document (as the PHP Registry::copy). */
   function copy(id, tune, salt) {
     var filter = D.filters[id];
-    var values = core.tuneValues(filter, tune);
+    var values = core.composeAll(filter, tune);
     if (!Object.keys(values).length && !salt) return null;
     var newId = core.copyId(id, values, salt);
     if (document.getElementById(newId)) return { id: newId };
@@ -359,7 +432,14 @@
     });
     Object.keys(values).forEach(function (key) {
       var parts = key.split("|");
-      if (prims[parts[0]]) prims[parts[0]].setAttribute(parts[1], values[key]);
+      var p = prims[parts[0]];
+      if (!p) return;
+      if (values[key].value !== null)
+        p.setAttribute(parts[1], values[key].value);
+      if (values[key].style !== null) {
+        var style = (p.getAttribute("style") || "").replace(/;\s*$/, "");
+        p.setAttribute("style", (style ? style + ";" : "") + values[key].style);
+      }
     });
     Array.prototype.forEach.call(el.getElementsByTagName("*"), function (p) {
       if (p.hasAttribute("id"))
@@ -411,18 +491,19 @@
     if (!preset || !preset.attrs) return null;
     var cls = utils.getPresetClassNameForModule(ctx.name, preset, null);
     // Deep merge like Divi's array_replace_recursive on the server (lodash is global in the builder).
-    var attrs =
+    var merged =
       preset.styleAttrs && window.lodash
         ? window.lodash.merge({}, preset.attrs, preset.styleAttrs)
         : preset.attrs;
-    return cls ? { cls: cls, attrs: attrs, shared: true } : null;
+    return cls ? { cls: cls, attrs: merged, shared: true } : null;
   }
 
   /** Selector templates per module, from the builder's module metadata (module.json). */
   var templateCache = {};
   function templatesFor(name) {
     if (!templateCache[name]) {
-      var store = vendor.wp.data && vendor.wp.data.select("divi/module-library");
+      var store =
+        vendor.wp.data && vendor.wp.data.select("divi/module-library");
       var meta = store && store.getModule ? store.getModule(name) : null;
       templateCache[name] = core.templates(meta && meta.attributes);
     }
@@ -436,7 +517,8 @@
       try {
         var templates = templatesFor(ctx.name);
         var order =
-          Object.keys(templates).length && divi.moduleUtils.getModuleOrderClassName
+          Object.keys(templates).length &&
+          divi.moduleUtils.getModuleOrderClassName
             ? divi.moduleUtils.getModuleOrderClassName(ctx.id)
             : "";
         if (!order) return el;

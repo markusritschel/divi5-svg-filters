@@ -1,82 +1,128 @@
 <?php
 /**
- * Tuning hint → control mapping (ported from the kit's demo site build.mjs) and value sanitizing.
+ * Tuning hints (syntax 2) → controls, and Divi field values → attribute values.
  */
 
 use D5SVGF\Tweaks;
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/fixtures/divi-fakes.php';
 require_once __DIR__ . '/../../includes/Tweaks.php';
 
 final class TweaksTest extends TestCase {
 
-	private function tweak( string $default, string $hint, string $attr = 'stdDeviation', string $key = 'feGaussianBlur|stdDeviation' ): array {
-		return array( 'key' => $key, 'attr' => $attr, 'default' => $default, 'hint' => $hint );
+	private function control( string $default, string $hint, string $key = 'feGaussianBlur|stdDeviation' ): array {
+		return Tweaks::control( array( 'key' => $key, 'attr' => explode( '|', $key )[1], 'default' => $default, 'hint' => $hint ) );
 	}
 
-	public function test_hex_default_gives_a_color_picker(): void {
-		$c = Tweaks::control( $this->tweak( '#FFE6B8', 'Light color', 'lighting-color' ) );
+	/* ---------- control() ---------- */
 
-		$this->assertSame( 'color', $c['type'] );
-		$this->assertSame( '#ffe6b8', $c['default'] );
-		$this->assertSame( 'Light color', $c['label'] );
-	}
-
-	public function test_number_with_range_gives_a_slider_with_unit_and_step(): void {
-		$c = Tweaks::control( $this->tweak( '8', '[0, 30] Blur radius in px; higher is softer' ) );
+	public function test_label_description_unit_and_range(): void {
+		$c = $this->control( '8', '[0, 30 px] Blur radius | Higher is softer' );
 
 		$this->assertSame( 'range', $c['type'] );
-		$this->assertSame( array( 0.0, 30.0 ), array( $c['min'], $c['max'] ) );
-		$this->assertSame( 0.1, $c['step'] );
-		$this->assertSame( '', $c['unit'] );
+		$this->assertSame( 'Blur radius', $c['label'] );
+		$this->assertSame( 'Higher is softer', $c['description'] );
+		$this->assertSame( array( 0.0, 30.0, 0.1 ), array( $c['min'], $c['max'], $c['step'] ) );
+		$this->assertSame( 'px', $c['unit'], 'display unit from the hint' );
+		$this->assertSame( '', $c['suffix'], 'the SVG value has no unit' );
 		$this->assertSame( 8.0, $c['default'] );
-		$this->assertSame( 'Blur radius in px; higher is softer', $c['label'] );
 	}
 
-	public function test_unit_is_kept_and_off_grid_defaults_get_step_any(): void {
-		$c = Tweaks::control( $this->tweak( '0.65s', '[0.2, 3] Time for the 10 noise frames', 'dur', 'animate|dur' ) );
+	public function test_suffix_comes_from_the_default_value(): void {
+		$c = $this->control( '.8s', '[0.2, 3 s] Flicker cycle', 'animate|dur' );
 
-		$this->assertSame( 's', $c['unit'] );
-		$this->assertSame( 0.01, $c['step'] );
-
-		$off = Tweaks::control( $this->tweak( '0.123', '[0, 1] Opacity', 'flood-opacity' ) );
-		$this->assertSame( 'any', $off['step'] );
+		$this->assertSame( array( 's', 's' ), array( $c['unit'], $c['suffix'] ) );
 	}
 
-	public function test_number_without_range_gets_the_demo_default_range(): void {
-		$c = Tweaks::control( $this->tweak( '5', 'Something' ) );
+	public function test_plain_label_without_description(): void {
+		$c = $this->control( '#000000', 'Shadow color', 'feFlood|flood-color' );
 
-		$this->assertSame( array( 0.0, 15.0 ), array( $c['min'], $c['max'] ) );
+		$this->assertSame( array( 'color', 'Shadow color', '' ), array( $c['type'], $c['label'], $c['description'] ) );
 	}
 
-	public function test_lists_give_a_text_field(): void {
-		$c = Tweaks::control( $this->tweak( '0.10 0.99', 'Red of the shadow and the highlight color, 0–1 each', 'tableValues', 'feFuncR|tableValues' ) );
+	public function test_old_style_hint_still_works(): void {
+		$c = $this->control( '8', '[0, 30] Blur radius in px; higher is softer' );
 
-		$this->assertSame( 'text', $c['type'] );
-		$this->assertSame( '0.10 0.99', $c['default'] );
+		$this->assertSame( array( 'range', 'Blur radius in px; higher is softer', 30.0 ), array( $c['type'], $c['label'], $c['max'] ) );
 	}
 
-	/** @dataProvider sanitize_cases */
-	public function test_sanitize( string $default, string $hint, $input, ?string $expected ): void {
-		$this->assertSame( $expected, Tweaks::sanitize( Tweaks::control( $this->tweak( $default, $hint ) ), $input ) );
+	public function test_pair_levels_matrix(): void {
+		$pair = $this->control( '.008 .03', '[0, 0.1] {pair} Ripple frequency | Horizontal and vertical', 'feTurbulence|baseFrequency' );
+		$this->assertSame( array( 'pair', 0.008, 0.03, 0.0, 0.1 ), array( $pair['type'], $pair['default_x'], $pair['default_y'], $pair['min'], $pair['max'] ) );
+
+		$levels = $this->control( '0 .35 .7 1', '{levels} Red levels', 'feFuncR|tableValues' );
+		$this->assertSame( array( 'levels', 4, 0.0, 1.0 ), array( $levels['type'], $levels['count'], $levels['lo'], $levels['hi'] ) );
+
+		$matrix = $this->control( '-2 -1 0  -1 1 1  0 1 2', '{matrix} Kernel', 'feConvolveMatrix|kernelMatrix' );
+		$this->assertSame( array( 'matrix', '-2 -1 0 -1 1 1 0 1 2' ), array( $matrix['type'], $matrix['default'] ) );
 	}
 
-	public function sanitize_cases(): array {
+	/* ---------- compose(): field values → attribute value / style ---------- */
+
+	/** @dataProvider compose_cases */
+	public function test_compose( string $default, string $hint, string $key, array $tune, $expected ): void {
+		$this->assertSame( $expected, Tweaks::compose( $this->control( $default, $hint, $key ), $tune ) );
+	}
+
+	public function compose_cases(): array {
+		$blur = array( '8', '[0, 30 px] Blur radius', 'feGaussianBlur|stdDeviation' );
+		$dur  = array( '.8s', '[0.2, 3 s] Flicker cycle', 'animate|dur' );
+		$col  = array( '#000000', 'Shadow color', 'feFlood|flood-color' );
+		$pair = array( '.008 .03', '[0, 0.1] {pair} Ripple frequency', 'feTurbulence|baseFrequency' );
+		$lev  = array( '0 .35 .7 1', '{levels} Red levels', 'feFuncR|tableValues' );
+		$mat  = array( '-2 -1 0 -1 1 1 0 1 2', '{matrix} Kernel', 'feConvolveMatrix|kernelMatrix' );
+		$gc   = '$variable({"type":"color","value":{"name":"gcid-primary-color","settings":{}}})$';
+		$gcs  = '$variable({"type":"color","value":{"name":"gcid-primary-color","settings":{"lightness":-10,"opacity":50}}})$';
+
+		$c = static function ( array $base, array $tune, $expected ) {
+			return array_merge( $base, array( $tune, $expected ) );
+		};
 		return array(
-			'color ok'                => array( '#ffe6b8', 'Light', '#AABBCC', '#aabbcc' ),
-			'color short form'        => array( '#ffe6b8', 'Light', '#abc', null ),
-			'color injection'         => array( '#ffe6b8', 'Light', '#aabbcc" onload="x', null ),
-			'range keeps unit'        => array( '0.65s', '[0.2, 3] Time', '1.5', '1.5s' ),
-			'range clamps high'       => array( '8', '[0, 30] Radius', '99', '30' ),
-			'range clamps low'        => array( '8', '[0, 30] Radius', '-4', '0' ),
-			'range no float noise'    => array( '8', '[0, 30] Radius', 0.1 + 0.2, '0.3' ),
-			'range rejects text'      => array( '8', '[0, 30] Radius', '8px; x', null ),
-			'range accepts own unit'  => array( '0.65s', '[0.2, 3] Time', '2s', '2s' ),
-			'text number list'        => array( '0.10 0.99', 'Red', ' 0.2   0.8 ', '0.2 0.8' ),
-			'text negative and exp'   => array( '0 -1 0', 'Kernel', '0 -1 1e-2', '0 -1 1e-2' ),
-			'text rejects other text' => array( '0.10 0.99', 'Red', '0.2 "><script>', null ),
-			'text rejects too long'   => array( '0.10 0.99', 'Red', str_repeat( '1 ', 200 ), null ),
-			'not a string'            => array( '0.10 0.99', 'Red', array( '1' ), null ),
+			'range with display unit'   => $c( $blur, array( 'feGaussianBlur|stdDeviation' => '12px' ), array( 'value' => '12', 'style' => null ) ),
+			'range unitless'            => $c( $blur, array( 'feGaussianBlur|stdDeviation' => '12' ), array( 'value' => '12', 'style' => null ) ),
+			'range clamped'             => $c( $blur, array( 'feGaussianBlur|stdDeviation' => '99px' ), array( 'value' => '30', 'style' => null ) ),
+			'range wrong unit'          => $c( $blur, array( 'feGaussianBlur|stdDeviation' => '2em' ), null ),
+			'range default'             => $c( $blur, array( 'feGaussianBlur|stdDeviation' => '8px' ), null ),
+			'range keeps suffix'        => $c( $dur, array( 'animate|dur' => '1.5s' ), array( 'value' => '1.5s', 'style' => null ) ),
+			'color hex'                 => $c( $col, array( 'feFlood|flood-color' => '#FF0000' ), array( 'value' => '#ff0000', 'style' => null ) ),
+			'color global'              => $c( $col, array( 'feFlood|flood-color' => $gc ), array( 'value' => null, 'style' => 'flood-color:var(--gcid-primary-color)' ) ),
+			'color global adjusted'     => $c( $col, array( 'feFlood|flood-color' => $gcs ), array( 'value' => null, 'style' => 'flood-color:hsl(from var(--gcid-primary-color) calc(h + 0) calc(s + 0) calc(l - 10) / 0.5)' ) ),
+			'color bad variable'        => $c( $col, array( 'feFlood|flood-color' => '$variable({"type":"color","value":{"name":"x;}body{"}})$' ), null ),
+			// On the frontend Divi's block parser has already resolved the reference (seen with 5.15.1).
+			'color global resolved'     => $c( $col, array( 'feFlood|flood-color' => 'var(--gcid-primary-color)' ), array( 'value' => null, 'style' => 'flood-color:var(--gcid-primary-color)' ) ),
+			'color global resolved hsl' => $c( $col, array( 'feFlood|flood-color' => 'hsl(from var(--gcid-primary-color) calc(h + 0) calc(s + 0) calc(l - 10) / 0.5)' ), array( 'value' => null, 'style' => 'flood-color:hsl(from var(--gcid-primary-color) calc(h + 0) calc(s + 0) calc(l - 10) / 0.5)' ) ),
+			'color other variable'      => $c( $col, array( 'feFlood|flood-color' => 'var(--wp-admin-color)' ), null ),
+			'color resolved injection'  => $c( $col, array( 'feFlood|flood-color' => 'var(--gcid-x);x:url(y)' ), null ),
+			'color injection'           => $c( $col, array( 'feFlood|flood-color' => '#fff" onload="x' ), null ),
+			'color with opacity'        => $c( $col, array( 'feFlood|flood-color' => 'rgba(51, 102, 153, 0.5)' ), array( 'value' => 'rgba(51, 102, 153, 0.5)', 'style' => null ) ),
+			'color rgb'                 => $c( $col, array( 'feFlood|flood-color' => 'rgb(51,102,153)' ), array( 'value' => 'rgba(51, 102, 153, 1)', 'style' => null ) ),
+			'color rgba out of range'   => $c( $col, array( 'feFlood|flood-color' => 'rgba(300, 0, 0, 0.5)' ), null ),
+			'color rgba injection'      => $c( $col, array( 'feFlood|flood-color' => 'rgba(1, 2, 3, 0.5);x:y' ), null ),
+			'pair both'                 => $c( $pair, array( 'feTurbulence|baseFrequency@x' => '0.02', 'feTurbulence|baseFrequency@y' => '0.05' ), array( 'value' => '0.02 0.05', 'style' => null ) ),
+			'pair one, other default'   => $c( $pair, array( 'feTurbulence|baseFrequency@y' => '0.09' ), array( 'value' => '0.008 0.09', 'style' => null ) ),
+			'pair clamped'              => $c( $pair, array( 'feTurbulence|baseFrequency@x' => '5' ), array( 'value' => '0.1 0.03', 'style' => null ) ),
+			'pair saved by 0.2 as list' => $c( $pair, array( 'feTurbulence|baseFrequency' => '0.02 0.04' ), array( 'value' => '0.02 0.04', 'style' => null ) ),
+			'levels count'              => $c( $lev, array( 'feFuncR|tableValues@count' => '3' ), array( 'value' => '0 0.5 1', 'style' => null ) ),
+			'levels shared range'       => $c( $lev, array( 'feFuncR|tableValues@count' => '3', '@min' => '0.2', '@max' => '0.8' ), array( 'value' => '0.2 0.5 0.8', 'style' => null ) ),
+			'levels range only'         => $c( $lev, array( '@max' => '0.6' ), array( 'value' => '0 0.2 0.4 0.6', 'style' => null ) ),
+			'levels count clamped'      => $c( $lev, array( 'feFuncR|tableValues@count' => '99' ), array( 'value' => '0 0.111111 0.222222 0.333333 0.444444 0.555556 0.666667 0.777778 0.888889 1', 'style' => null ) ),
+			'levels untouched'          => $c( $lev, array(), null ),
+			'levels saved by 0.2'       => $c( $lev, array( 'feFuncR|tableValues' => '0 1' ), array( 'value' => '0 1', 'style' => null ) ),
+			'matrix'                    => $c( $mat, array( 'feConvolveMatrix|kernelMatrix' => '0 -1 0 -1 5 -1 0 -1 0' ), array( 'value' => '0 -1 0 -1 5 -1 0 -1 0', 'style' => null ) ),
+			'matrix wrong size'         => $c( $mat, array( 'feConvolveMatrix|kernelMatrix' => '1 2 3' ), null ),
+			'matrix default'            => $c( $mat, array( 'feConvolveMatrix|kernelMatrix' => '-2 -1 0  -1 1 1  0 1 2' ), null ),
+			'not a string'              => $c( $blur, array( 'feGaussianBlur|stdDeviation' => array( '1' ) ), null ),
 		);
+	}
+
+	/* ---------- sanitize(): single text/number lists ---------- */
+
+	public function test_text_lists(): void {
+		$c = $this->control( '0.1 0.9', 'Values', 'feFuncA|tableValues' );
+
+		$this->assertSame( '0.2 0.8', Tweaks::sanitize( $c, ' 0.2   0.8 ' ) );
+		$this->assertNull( Tweaks::sanitize( $c, '0.2 "><script>' ) );
+		$this->assertNull( Tweaks::sanitize( $c, str_repeat( '1 ', 200 ) ) );
 	}
 }

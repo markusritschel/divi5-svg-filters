@@ -78,6 +78,7 @@ final class Builder {
 			$filters[ $id ] = array(
 				'label'    => $entry['label'],
 				'controls' => array_values( $entry['controls'] ),
+				'presets'  => (object) $entry['presets'], // object even when empty, for JS
 				'markup'   => $entry['markup'],
 			);
 		}
@@ -94,9 +95,15 @@ final class Builder {
 				'applyTo'   => __( 'Apply to', 'divi5-svg-filters' ),
 				'element'   => __( 'Element', 'divi5-svg-filters' ),
 				'bg'        => __( 'Background only', 'divi5-svg-filters' ),
-				/* translators: 1: filter name, 2: number of values */
-				'tune'      => __( 'Tune %1$s (%2$d values)', 'divi5-svg-filters' ),
-				'reset'     => __( 'Reset', 'divi5-svg-filters' ),
+				/* translators: %s: filter name */
+				'tune'      => __( 'Tune %s', 'divi5-svg-filters' ),
+				'reset'     => __( 'Reset all', 'divi5-svg-filters' ),
+				'presets'   => __( 'Presets', 'divi5-svg-filters' ),
+				'horiz'     => __( 'horizontal', 'divi5-svg-filters' ),
+				'vert'      => __( 'vertical', 'divi5-svg-filters' ),
+				'darkest'   => __( 'Darkest level', 'divi5-svg-filters' ),
+				'brightest' => __( 'Brightest level', 'divi5-svg-filters' ),
+				'levelsDesc' => __( 'Shared by all channels; the levels are spread evenly between darkest and brightest.', 'divi5-svg-filters' ),
 				'desc'      => __( 'An SVG filter from the SVG Filter Kit or your uploads. Combined with the filters above in one declaration.', 'divi5-svg-filters' ),
 			),
 		);

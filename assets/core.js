@@ -21,60 +21,199 @@
     return out === "-0" ? "0" : out;
   }
 
-  /** Validated attribute value for a control, or null (as Tweaks::sanitize). */
-  function sanitize(control, value) {
+  var LEVELS_MIN = 2;
+  var LEVELS_MAX = 10;
+
+  function has(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+  }
+
+  /** Numbers of a list, or [] if any token is not numeric. */
+  function numbers(list) {
+    var tokens = String(list).trim().split(/[\s,]+/).filter(Boolean);
+    for (var i = 0; i < tokens.length; i++) if (!NUMBER.test(tokens[i])) return [];
+    return tokens.map(parseFloat);
+  }
+
+  /** Number list as Tweaks::sanitize does for text, or null. */
+  function list(value) {
     if (typeof value !== "string" && typeof value !== "number") return null;
-    if (control.type === "color") {
-      return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value)
-        ? value.toLowerCase()
-        : null;
+    var tokens = String(value).trim().split(/[\s,]+/).filter(Boolean);
+    var out = tokens.join(" ");
+    if (!tokens.length || out.length > MAX_TEXT) return null;
+    for (var i = 0; i < tokens.length; i++) if (!NUMBER.test(tokens[i])) return null;
+    return out;
+  }
+
+  /** Number from a field value: plain, with the display unit, or with the SVG suffix. */
+  function parseNumber(value, control) {
+    if (typeof value === "number") return isFinite(value) ? value : null;
+    if (typeof value !== "string") return null;
+    var m = /^\s*(-?\d*\.?\d+(?:e-?\d+)?)\s*([a-z%]*)\s*$/i.exec(value);
+    if (!m) return null;
+    var unit = m[2].toLowerCase();
+    if (unit && unit !== (control.unit || "") && unit !== (control.suffix || "")) return null;
+    return parseFloat(m[1]);
+  }
+
+  function clamp(n, min, max) {
+    return Math.min(max, Math.max(min, n));
+  }
+
+  /** Hex or rgb(a) color, normalized as Tweaks::sanitize does (Divi stores rgba() below 100% opacity). */
+  function plainColor(raw) {
+    if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase();
+    var m = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(\d*\.?\d+)\s*)?\)$/i.exec(raw);
+    if (!m || Math.max(+m[1], +m[2], +m[3]) > 255) return null;
+    var alpha = m[4] !== undefined && m[4] !== "" ? parseFloat(m[4]) : 1;
+    return alpha > 1 ? null : "rgba(" + +m[1] + ", " + +m[2] + ", " + +m[3] + ", " + number(alpha) + ")";
+  }
+
+  /** CSS for a Divi global color reference (as Tweaks::color_variable + Divi's transform), or null. */
+  function colorVariable(raw) {
+    var m = /^\$variable\(([\s\S]*)\)\$$/.exec(raw);
+    if (!m) return null;
+    var data;
+    try {
+      data = JSON.parse(m[1]);
+    } catch (e) {
+      return null;
     }
-    if (control.type === "range") {
-      if (typeof value === "string") {
-        var m = /^\s*(-?\d*\.?\d+(?:e-?\d+)?)\s*([a-z%]*)\s*$/i.exec(value);
-        if (!m || (m[2] !== "" && m[2] !== control.unit)) return null;
-        value = parseFloat(m[1]);
+    var name = data && data.value && data.value.name;
+    if (!data || data.type !== "color" || typeof name !== "string" || !/^gcid-[a-z0-9-]+$/i.test(name)) return null;
+    var settings = {};
+    var raw2 = (data.value && data.value.settings) || {};
+    ["hue", "saturation", "lightness", "opacity"].forEach(function (k) {
+      if (has(raw2, k) && raw2[k] !== null && raw2[k] !== "" && isFinite(raw2[k])) settings[k] = Number(raw2[k]);
+    });
+    var css = transform("var(--" + name + ")", settings);
+    return /^[a-z0-9\s(),.%+\-\/]+$/i.test(css) ? css : null;
+  }
+
+  /** Port of Divi 5.15.1 GlobalData::transform_state_into_global_color_value(). */
+  function transform(cssVariable, settings) {
+    if (!Object.keys(settings).length) return cssVariable;
+    var hue = settings.hue || 0;
+    var sat = settings.saturation || 0;
+    var light = settings.lightness || 0;
+    var hasOpacity = has(settings, "opacity");
+    var opacity = hasOpacity ? settings.opacity : null;
+    var printed = opacity !== null && (opacity !== 100 || hasOpacity) ? " / " + opacity / 100 : "";
+    var fmt = function (base, adj) {
+      return "calc(" + base + (adj >= 0 ? " + " : " - ") + Math.abs(adj) + ")";
+    };
+    if (!(hue | 0) && !(sat | 0) && !(light | 0) && (opacity === null || ((opacity | 0) === 100 && !hasOpacity))) return cssVariable;
+    var s = fmt("s", sat);
+    if (sat < 0) s = "max(0, " + s + ")";
+    return "hsl(from " + cssVariable + " " + fmt("h", hue) + " " + s + " " + fmt("l", light) + printed + ")";
+  }
+
+  /**
+   * Attribute value or style declaration for a control from the filter's field values
+   * (as Tweaks::compose). null: nothing valid or only the default.
+   */
+  function compose(c, tune) {
+    var key = c.key;
+    var out = function (value) {
+      return { value: value, style: null };
+    };
+    tune = tune && typeof tune === "object" ? tune : {};
+
+    if (c.type === "color") {
+      var raw = tune[key];
+      if (typeof raw !== "string") return null;
+      // Builder: '$variable(…)$'; the frontend gets Divi's already resolved CSS (accepted the same way).
+      var css = colorVariable(raw);
+      if (css === null && /^(?:var\(--gcid-[a-z0-9-]+\)|hsl\(from var\(--gcid-[a-z0-9-]+\)[a-z0-9\s(),.%+\-\/]*\))$/i.test(raw)) css = raw;
+      if (css !== null) return { value: null, style: c.attr + ":" + css };
+      var color = plainColor(raw);
+      return color !== null && color !== c.default ? out(color) : null;
+    }
+    if (c.type === "range") {
+      if (!has(tune, key)) return null;
+      var n = parseNumber(tune[key], c);
+      if (n === null) return null;
+      n = clamp(n, c.min, c.max);
+      return Math.abs(n - c.default) < 1e-9 ? null : out(number(n) + c.suffix);
+    }
+    if (c.type === "pair") {
+      var legacy = has(tune, key) ? numbers(list(tune[key]) || "") : [];
+      var part = function (value, fallback) {
+        var p = value === undefined || value === null ? null : parseNumber(value, c);
+        return clamp(p === null ? fallback : p, c.min, c.max);
+      };
+      var x = part(tune[key + "@x"], legacy.length ? legacy[0] : c.default_x);
+      var y = part(tune[key + "@y"], legacy.length > 1 ? legacy[1] : c.default_y);
+      if (Math.abs(x - c.default_x) < 1e-9 && Math.abs(y - c.default_y) < 1e-9) return null;
+      return out(number(x) + " " + number(y));
+    }
+    if (c.type === "levels") {
+      if (!has(tune, key + "@count") && !has(tune, "@min") && !has(tune, "@max")) {
+        var saved = has(tune, key) ? list(tune[key]) : null; // saved by 0.1/0.2 as a plain list
+        return saved !== null && saved !== list(c.default) ? out(saved) : null;
       }
-      if (!isFinite(value)) return null;
-      return (
-        number(Math.min(control.max, Math.max(control.min, value))) +
-        control.unit
-      );
+      var num = function (value, min, max, fallback) {
+        return clamp(value !== undefined && value !== "" && isFinite(value) ? Number(value) : fallback, min, max);
+      };
+      var count = Math.round(num(tune[key + "@count"], LEVELS_MIN, LEVELS_MAX, c.count));
+      var lo = num(tune["@min"], 0, 1, c.lo);
+      var hi = num(tune["@max"], 0, 1, c.hi);
+      var levels = [];
+      for (var i = 0; i < count; i++) levels.push(number(lo + ((hi - lo) * i) / (count - 1)));
+      return out(levels.join(" "));
     }
-    var tokens = String(value)
-      .trim()
-      .split(/[\s,]+/)
-      .filter(Boolean);
-    var list = tokens.join(" ");
-    if (!tokens.length || list.length > MAX_TEXT) return null;
-    for (var i = 0; i < tokens.length; i++)
-      if (!NUMBER.test(tokens[i])) return null;
-    return list;
+    var value = has(tune, key) ? list(tune[key]) : null;
+    if (value === null) return null;
+    if (c.type === "matrix" && numbers(value).length !== 9) return null;
+    return value !== list(c.default) ? out(value) : null;
   }
 
-  function isDefault(control, value) {
-    if (control.type === "range")
-      return Math.abs(parseFloat(value) - control.default) < 1e-9;
-    if (control.type === "text")
-      return sanitize(control, control.default) === value;
-    return control.default === value;
-  }
-
-  /** Valid, non-default tuned values of a filter, sorted by key. */
-  function tuneValues(filter, tune) {
-    var out = {};
-    if (!filter || !tune || typeof tune !== "object") return out;
+  /** Changed controls of a filter: key → {value, style}, sorted by key (hash input for copies). */
+  function composeAll(filter, tune) {
+    var result = {};
+    if (!filter) return result;
     filter.controls
       .slice()
       .sort(function (a, b) {
         return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
       })
       .forEach(function (c) {
-        if (!Object.prototype.hasOwnProperty.call(tune, c.key)) return;
-        var v = sanitize(c, tune[c.key]);
-        if (v !== null && !isDefault(c, v)) out[c.key] = v;
+        var composed = compose(c, tune);
+        if (composed) result[c.key] = composed;
       });
-    return out;
+    return result;
+  }
+
+  /** Field values (svgTune[<filter id>]) for a preset given as attribute values. */
+  function presetFields(filter, preset) {
+    var fields = {};
+    filter.controls.forEach(function (c) {
+      if (!has(preset, c.key)) return;
+      var raw = String(preset[c.key]);
+      if (c.type === "color") {
+        if (/^#[0-9a-f]{6}$/i.test(raw)) fields[c.key] = raw.toLowerCase();
+      } else if (c.type === "range") {
+        var n = parseNumber(raw, c);
+        if (n !== null) fields[c.key] = number(clamp(n, c.min, c.max)) + (c.unit || c.suffix || "");
+      } else if (c.type === "pair") {
+        var xy = numbers(raw);
+        if (xy.length === 2) {
+          fields[c.key + "@x"] = number(xy[0]);
+          fields[c.key + "@y"] = number(xy[1]);
+        }
+      } else if (c.type === "levels") {
+        var lv = numbers(raw);
+        if (lv.length >= LEVELS_MIN) {
+          fields[c.key + "@count"] = String(Math.min(LEVELS_MAX, lv.length));
+          fields["@min"] = number(Math.min.apply(null, lv));
+          fields["@max"] = number(Math.max.apply(null, lv));
+        }
+      } else {
+        var l = list(raw);
+        if (l !== null) fields[c.key] = l;
+      }
+    });
+    return fields;
   }
 
   /** FNV-1a, 8 hex digits. */
@@ -256,9 +395,10 @@
   }
 
   return {
-    sanitize: sanitize,
-    isDefault: isDefault,
-    tuneValues: tuneValues,
+    compose: compose,
+    composeAll: composeAll,
+    colorVariable: colorVariable,
+    presetFields: presetFields,
     hash: hash,
     copyId: copyId,
     plan: plan,

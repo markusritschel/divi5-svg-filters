@@ -19,11 +19,11 @@ final class Registry {
 	/** Kit category => dropdown group, in dropdown order. Uploads and unknown categories go to 'custom'. */
 	const GROUPS = array( 'color', 'texture', 'distortion', 'shape', 'light', 'fill', 'motion', 'custom' );
 
-	/** @var array<string, array{id:string, label:string, group:string, controls:array, markup:string}> */
+	/** @var array<string, array{id:string, label:string, group:string, controls:array, presets:array, markup:string}> */
 	private $entries = array();
 
 	/**
-	 * @param array    $filters    svgf_filters()-shaped: id => {title, category, tweaks, markup}.
+	 * @param array    $filters    svgf_filters()-shaped: id => {title, category, tweaks, presets, markup}.
 	 * @param string[] $upload_ids IDs that come from uploads (always in "Custom").
 	 */
 	public function __construct( array $filters, array $upload_ids = array() ) {
@@ -49,6 +49,8 @@ final class Registry {
 				'label'    => '' !== $title ? $title : $id,
 				'group'    => self::group_label( $category ),
 				'controls' => $controls,
+				// Preset values are raw attribute values; they only reach a page through the fields (compose()).
+				'presets'  => is_array( $filter['presets'] ?? null ) ? $filter['presets'] : array(),
 				'markup'   => (string) ( $filter['markup'] ?? '' ),
 			);
 		}
@@ -104,9 +106,10 @@ final class Registry {
 	 * Unknown keys, invalid values and values equal to the default are ignored.
 	 * Without remaining values and without $salt the shared filter applies (null).
 	 * $salt forces a per-instance copy (spotlight/melt react per element).
+	 * Global colors become a CSS declaration in the primitive's style attribute.
 	 *
 	 * @param string $id   Filter ID.
-	 * @param array  $tune Tweak key => value.
+	 * @param array  $tune Field values of the filter (svgTune[<filter id>], see Tweaks).
 	 * @param string $salt Optional instance discriminator, e.g. the element's order class.
 	 * @return array{id:string, markup:string}|null
 	 */
@@ -118,12 +121,9 @@ final class Registry {
 
 		$values = array();
 		foreach ( $entry['controls'] as $key => $control ) {
-			if ( ! array_key_exists( $key, $tune ) ) {
-				continue;
-			}
-			$value = Tweaks::sanitize( $control, $tune[ $key ] );
-			if ( null !== $value && ! Tweaks::is_default( $control, $value ) ) {
-				$values[ $key ] = $value;
+			$composed = Tweaks::compose( $control, $tune );
+			if ( null !== $composed ) {
+				$values[ $key ] = $composed;
 			}
 		}
 		if ( ! $values && '' === $salt ) {
@@ -151,10 +151,18 @@ final class Registry {
 			$seen[ $tag ] = ( $seen[ $tag ] ?? 0 ) + 1;
 			$primitives[ $el->hasAttribute( 'id' ) ? '#' . $el->getAttribute( 'id' ) : ( 1 === $seen[ $tag ] ? $tag : $tag . ':' . $seen[ $tag ] ) ] = $el;
 		}
-		foreach ( $values as $key => $value ) {
+		foreach ( $values as $key => $composed ) {
 			list( $primitive, $attr ) = explode( '|', $key, 2 );
-			if ( isset( $primitives[ $primitive ] ) ) {
-				$primitives[ $primitive ]->setAttribute( $attr, $value );
+			if ( ! isset( $primitives[ $primitive ] ) ) {
+				continue;
+			}
+			$el = $primitives[ $primitive ];
+			if ( null !== $composed['value'] ) {
+				$el->setAttribute( $attr, $composed['value'] );
+			}
+			if ( null !== $composed['style'] ) {
+				$style = trim( $el->getAttribute( 'style' ) );
+				$el->setAttribute( 'style', ( '' !== $style ? rtrim( $style, ';' ) . ';' : '' ) . $composed['style'] );
 			}
 		}
 
