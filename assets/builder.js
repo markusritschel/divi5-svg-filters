@@ -143,35 +143,64 @@
     }
     if (c.type === "range") {
       var num = parseFloat(current);
+      var commit = function (e) {
+        props.onSet(e.target.value);
+      };
+      // Same markup and classes as Divi's own range field, so Divi's stylesheet (light and dark
+      // panel) styles it. The number is a text field like Divi's: no locale decimal comma.
       return h(
         "div",
         { className: "d5svgf-tune__row" },
         label,
         h(
           "div",
-          { className: "d5svgf-tune__range" },
+          {
+            className:
+              "et-vb-field-input-range-container et-vb-field-input-range-container--has-unit-picker-slider",
+          },
           h("input", {
             type: "range",
+            className: "et-vb-field-input et-vb-field-input-range",
             min: c.min,
             max: c.max,
             step: c.step,
             value: num,
-            onChange: function (e) {
-              props.onSet(e.target.value);
-            },
+            onChange: commit,
           }),
-          h("input", {
-            type: "number",
-            className: "et-vb-field-input et-vb-field-input-text",
-            min: c.min,
-            max: c.max,
-            step: c.step,
-            value: num,
-            onChange: function (e) {
-              props.onSet(e.target.value);
-            },
-          }),
-          c.unit ? h("span", { className: "d5svgf-tune__unit" }, c.unit) : null,
+          h(
+            "div",
+            { className: "et-vb-field-input-css-numeric-container et-vb-field-input-range-text" },
+            h(
+              "div",
+              { className: "et-vb-settings-option--numeric-spinner-control et-vb-field-input-css-numeric-text" },
+              h(
+                "div",
+                { className: "et-vb-numeric-input" },
+                h(
+                  "div",
+                  { className: "et-vb-numeric-input-text" },
+                  h("input", {
+                    type: "text",
+                    key: String(num), // re-render with the slider's value
+                    defaultValue: String(num),
+                    inputMode: "decimal",
+                    spellCheck: false,
+                    onBlur: commit,
+                    onKeyDown: function (e) {
+                      if (e.key === "Enter") commit(e);
+                    },
+                  }),
+                ),
+                c.unit
+                  ? h(
+                      "div",
+                      { className: "et-vb-numeric-input-value-label" },
+                      h("span", { className: "et-vb-numeric-input-value-unit" }, c.unit),
+                    )
+                  : null,
+              ),
+            ),
+          ),
         ),
       );
     }

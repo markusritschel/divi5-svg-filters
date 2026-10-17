@@ -47,15 +47,8 @@
   opacity: 0.8;
 }
 
-.d5svgf-tune__range {
-  display: grid;
-  grid-template-columns: 1fr 72px auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.d5svgf-tune input[type="number"],
-.d5svgf-tune input[type="text"] {
+/* Number lists (sliders use Divi's own range markup and styles). */
+.d5svgf-tune__row > input[type="text"] {
   width: 100%;
   box-sizing: border-box;
 }
