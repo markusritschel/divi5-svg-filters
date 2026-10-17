@@ -29,8 +29,8 @@ php kit/tests/loader-test.php
 cd e2e && pnpm install && CHROMIUM_PATH=/usr/bin/chromium pnpm test
 docker compose -f e2e/docker-compose.yml down -v   # throw the environment away
 
-# Update the bundled kit (currently from the local branch until v1.3.0 is released)
-git subtree pull --prefix=kit ~/Code/wp-svg-filters plugin-hooks --squash
+# Update the bundled kit to a kit release tag
+git subtree pull --prefix=kit https://github.com/markusritschel/wp-svg-filters.git vX.Y.Z --squash
 ```
 
 Releases: bump `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`,
@@ -100,8 +100,6 @@ union types, `match`), namespace `D5SVGF`, one class per file in
 - [high] Not published yet: the GitHub repo, kit v1.3.0 release and the
   first plugin release need Markus's go; updates are untested end to end
   until then.
-- [medium] The kit subtree comes from the local branch `plugin-hooks`;
-  re-point it to GitHub after the kit release.
 - [medium] Option-group presets: frontend only, not in the builder preview;
   saving them through Divi's preset UI is not covered by the e2e tests.
 - [medium] Divi API: `Frontend::FILTER_FUNCTIONS` copies Divi 5.15.1's map;
