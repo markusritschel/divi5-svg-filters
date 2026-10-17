@@ -230,6 +230,23 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     assert.equal(await attrIn(poster, 'feFuncR', 'tableValues'), '0 0.166667 0.333333 0.5', 'each channel: red brightest');
     assert.equal(await attrIn(poster, 'feFuncG', 'tableValues'), '0 .35 .7 1', 'each channel: green untouched');
 
+    await choose('fx-wave');
+    const pad = page.locator('.d5svgf-pad');
+    await pad.scrollIntoViewIfNeeded();
+    const box = await pad.boundingBox();
+    await pad.click({ position: { x: box.width / 2, y: box.height / 4 } });
+    await page.waitForTimeout(800);
+    // Clicks land on whole pixels: allow a step either way.
+    const [px, py] = (await attrIn(await copyOf(), 'feTurbulence', 'baseFrequency')).split(' ').map(Number);
+    assert.ok(Math.abs(px - 0.05) <= 0.002 && Math.abs(py - 0.075) <= 0.002, `pad sets both frequencies (${px} ${py})`);
+    await pad.press('ArrowRight');
+    await page.waitForTimeout(800);
+    const stepped = `${Math.round((px + 0.001) * 1000) / 1000} ${py}`;
+    assert.equal(await attrIn(await copyOf(), 'feTurbulence', 'baseFrequency'), stepped, 'arrow key steps');
+    const horiz = page.locator('.et-vb-field:is([class*="d5svgfTune_fx-wave_1 "], [class$="d5svgfTune_fx-wave_1"]) .et-vb-numeric-input-text input').first();
+    assert.equal(await horiz.inputValue(), stepped.split(' ')[0], 'slider follows the pad');
+    assert.equal(await page.locator('.d5svgf-pad__noise feTurbulence').getAttribute('baseFrequency'), stepped, 'noise swatch follows');
+
     await choose('fx-duotone');
     await page.locator('.d5svgf-presets button', { hasText: 'Sepia' }).click();
     await page.waitForTimeout(800);

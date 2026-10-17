@@ -42,6 +42,86 @@
   margin-top: 10px;
 }
 
+/* 2D pad for horizontal/vertical pairs, with a noise swatch. */
+.d5svgf-pad-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.d5svgf-pad {
+  position: relative;
+  flex: 1;
+  height: 96px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 3px;
+  background-image: linear-gradient(rgba(127, 127, 127, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 127, 127, 0.12) 1px, transparent 1px);
+  background-size: 25% 25%;
+  cursor: crosshair;
+  touch-action: none;
+  overflow: hidden;
+}
+
+.d5svgf-pad:focus-visible {
+  outline: 2px solid #2b87da;
+  outline-offset: 1px;
+}
+
+.d5svgf-pad__line {
+  position: absolute;
+  background: rgba(43, 135, 218, 0.35);
+  pointer-events: none;
+}
+
+.d5svgf-pad__line--x {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.d5svgf-pad__line--y {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.d5svgf-pad__dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: 0 0 -6px -6px;
+  border-radius: 50%;
+  background: #2b87da;
+  box-shadow: 0 0 0 2px #fff;
+  pointer-events: none;
+}
+
+.d5svgf-pad__axis {
+  position: absolute;
+  font-size: 10px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.d5svgf-pad__axis--x {
+  right: 4px;
+  bottom: 2px;
+}
+
+.d5svgf-pad__axis--y {
+  left: 2px;
+  top: 4px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.d5svgf-pad__noise {
+  flex: none;
+  align-self: center;
+  border-radius: 3px;
+}
+
 /* 3×3 kernel grid. */
 .d5svgf-matrix {
   display: grid;

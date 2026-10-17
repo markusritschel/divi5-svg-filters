@@ -89,15 +89,20 @@
             return chosen(e) && when(e);
           }
         : chosen;
+      // fieldKey null: the field gets the filter's whole svgTune entry (e.g. the 2D pad).
       var tune = {};
       tune[filterId] = {};
-      tune[filterId][fieldKey] = dflt;
+      if (fieldKey !== null) tune[filterId][fieldKey] = dflt;
       fields.push(
         Object.assign({}, common, {
-          subName: "svgTune." + filterId + "." + fieldKey,
+          subName:
+            "svgTune." + filterId + (fieldKey !== null ? "." + fieldKey : ""),
           label: label,
           description: description || undefined,
-          defaultAttr: { desktop: { value: { svgTune: tune } } },
+          defaultAttr:
+            fieldKey !== null
+              ? { desktop: { value: { svgTune: tune } } }
+              : undefined,
           visible: visible,
           features: Object.assign({}, common.features, features || {}),
           component: component,
@@ -148,16 +153,30 @@
           );
           break;
         case "pair":
+          field(null, c.label, c.description, null, {
+            type: "field",
+            name: "d5svgf/pad",
+            props: {
+              tweak: c.key,
+              min: c.min,
+              max: c.max,
+              step: c.step,
+              dx: c.default_x,
+              dy: c.default_y,
+              unit: UNIT_PROPERTY[c.unit] ? c.unit : "",
+              noise: c.key.indexOf("feTurbulence") === 0,
+            },
+          });
           field(
             c.key + "@x",
-            c.label + " (" + I.horiz + ")",
-            c.description,
+            I.horiz,
+            "",
             withUnit(c.default_x, c),
             range(c.min, c.max, c.step, c.unit),
           );
           field(
             c.key + "@y",
-            c.label + " (" + I.vert + ")",
+            I.vert,
             "",
             withUnit(c.default_y, c),
             range(c.min, c.max, c.step, c.unit),
@@ -469,7 +488,133 @@
     );
   }
 
+  /**
+   * 2D pad for a {pair}: drag the dot (or use the arrow keys, Shift for bigger steps) to set the
+   * horizontal and vertical value together; written on release, so a drag is one undo step.
+   * Turbulence frequencies get a noise swatch at the same pixel scale as on the page.
+   */
+  function Pad(props) {
+    var tune = props.value && typeof props.value === "object" ? props.value : {};
+    var k = props.tweak;
+    var min = props.min;
+    var max = props.max;
+    var step = typeof props.step === "number" ? props.step : (max - min) / 100;
+    var drag = React.useState(null);
+    var noiseId = React.useState(function () {
+      return "d5svgf-noise-" + Math.random().toString(36).slice(2, 10);
+    })[0];
+    var clampTo = function (n) {
+      return Math.min(max, Math.max(min, n));
+    };
+    var read = function (v, fallback) {
+      var n = parseFloat(v);
+      return isFinite(n) ? clampTo(n) : fallback;
+    };
+    var snap = function (n) {
+      return clampTo(Math.round((n - min) / step) * step + min);
+    };
+    var saved = [read(tune[k + "@x"], props.dx), read(tune[k + "@y"], props.dy)];
+    var shown = drag[0] || saved;
+    var commit = function (xy) {
+      var next = Object.assign({}, tune);
+      next[k + "@x"] = number(xy[0]) + props.unit;
+      next[k + "@y"] = number(xy[1]) + props.unit;
+      props.onChange({ inputValue: next });
+    };
+    var at = function (e) {
+      var r = e.currentTarget.getBoundingClientRect();
+      var fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      var fy = Math.min(1, Math.max(0, (r.bottom - e.clientY) / r.height));
+      return [snap(min + (max - min) * fx), snap(min + (max - min) * fy)];
+    };
+    var pct = function (n) {
+      return ((n - min) / (max - min)) * 100 + "%";
+    };
+    var keys = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, 1],
+      ArrowDown: [0, -1],
+    };
+    return h(
+      "div",
+      { className: "d5svgf-pad-row" },
+      h(
+        "div",
+        {
+          className: "d5svgf-pad",
+          tabIndex: 0,
+          role: "group",
+          "aria-label":
+            I.horiz + " " + number(shown[0]) + ", " + I.vert + " " + number(shown[1]),
+          onPointerDown: function (e) {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            drag[1](at(e));
+          },
+          onPointerMove: function (e) {
+            if (drag[0]) drag[1](at(e));
+          },
+          onPointerUp: function (e) {
+            if (!drag[0]) return;
+            commit(at(e));
+            drag[1](null);
+          },
+          onKeyDown: function (e) {
+            var d = keys[e.key];
+            if (!d) return;
+            e.preventDefault();
+            var f = e.shiftKey ? 10 : 1;
+            commit([
+              snap(saved[0] + d[0] * step * f),
+              snap(saved[1] + d[1] * step * f),
+            ]);
+          },
+        },
+        h("span", {
+          className: "d5svgf-pad__line d5svgf-pad__line--x",
+          style: { bottom: pct(shown[1]) },
+        }),
+        h("span", {
+          className: "d5svgf-pad__line d5svgf-pad__line--y",
+          style: { left: pct(shown[0]) },
+        }),
+        h("span", {
+          className: "d5svgf-pad__dot",
+          style: { left: pct(shown[0]), bottom: pct(shown[1]) },
+        }),
+        h("span", { className: "d5svgf-pad__axis d5svgf-pad__axis--x" }, I.horiz + " →"),
+        h("span", { className: "d5svgf-pad__axis d5svgf-pad__axis--y" }, I.vert + " →"),
+      ),
+      props.noise
+        ? h(
+            "svg",
+            {
+              className: "d5svgf-pad__noise",
+              width: 72,
+              height: 72,
+              "aria-hidden": true,
+            },
+            h(
+              "filter",
+              { id: noiseId, x: 0, y: 0, width: "100%", height: "100%" },
+              h("feTurbulence", {
+                type: "fractalNoise",
+                baseFrequency: number(shown[0]) + " " + number(shown[1]),
+                numOctaves: 2,
+              }),
+              h("feColorMatrix", { type: "saturate", values: "0" }),
+            ),
+            h("rect", { width: 72, height: 72, filter: "url(#" + noiseId + ")" }),
+          )
+        : null,
+    );
+  }
+
   try {
+    divi.fieldLibrary.registerFieldComponent({
+      name: "d5svgf/pad",
+      component: Pad,
+    });
     divi.fieldLibrary.registerFieldComponent({
       name: "d5svgf/tune-head",
       component: TuneHead,
