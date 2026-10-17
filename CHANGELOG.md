@@ -4,6 +4,14 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.2.1]
+
+### Fixed
+
+- Tune sliders look like Divi's own sliders (thin track, number box with
+  unit) in the light and dark builder theme; numbers use a decimal point
+  regardless of the browser locale.
+
 ## [0.2.0]
 
 ### Changed
