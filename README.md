@@ -40,14 +40,14 @@ _Blend_ you find:
   Divi's own filters stay on the element).
 - **Tune ‹filter›** — the filter's tunable values as regular Divi fields:
   sliders with units (px, deg, s), Divi's color picker (including your global
-  colors, which stay linked; its opacity is the shadow's opacity for Inner
-  shadow), a 2D pad plus two sliders for horizontal/vertical frequencies
+  colors, which stay linked; its opacity is the strength for Color tint and
+  the shadow's opacity for Inner shadow), a 2D pad plus two sliders for horizontal/vertical frequencies
   (with a noise swatch), a dial for Bevel's light direction (the dot shows
   where the light comes from), levels for Posterize (for all channels
   together or each channel), a 3×3 kernel for Emboss. The info button on a
   field explains it in more detail. Some filters offer presets with a preview
-  (Duotone, Threshold, Emboss, Inner shadow); *Swap colors* exchanges the two
-  colors of Duotone and Threshold; *Reset all* returns to the filter's
+  (Duotone, Threshold, Texture fill, Emboss, Inner shadow); *Swap colors*
+  exchanges the two colors of Duotone, Threshold and Texture fill; *Reset all* returns to the filter's
   defaults. Tuned elements get their own copy of the filter; untuned
   ones share the standard one.
 

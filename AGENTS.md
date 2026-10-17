@@ -111,6 +111,7 @@ union types, `match`), namespace `D5SVGF`, one class per file in
 - [low] Pointer filters set through a preset share one light per preset.
 - [low] Module elements whose Filters use a selector that is not a plain
   `{{selector}} …` string in module.json are skipped.
+- [low] Hover melt's hover strength is fixed in the kit's script.
 - [low] Text tuning values must be number lists; the import message does not
   list what the sanitizer removed; admin notices are not dismissible.
 - [low] Deliberate: no uninstall cleanup, so uploads survive a reinstall.

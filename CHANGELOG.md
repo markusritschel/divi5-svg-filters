@@ -4,6 +4,21 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.7.0]
+
+### Added
+
+- Color tint: strength through the color picker's opacity (kit 1.8.0).
+- Living grain: *Grain strength*, as Film grain.
+- Texture fill: *Vein color* and *Base color* with presets, previews and
+  *Swap colors*.
+
+### Changed
+
+- Texture fill's default look changes from multicolor to violet veins (its
+  colors are choosable now).
+- Bundles the SVG Filter Kit 1.8.0.
+
 ## [0.6.0]
 
 ### Changed

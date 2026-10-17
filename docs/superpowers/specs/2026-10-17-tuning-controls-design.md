@@ -96,3 +96,36 @@ simple controls (values may carry the unit, `"40px"`, or a `$variable(…)$`),
 turn field values into attribute values and validate them as before. Tunings
 saved with 0.1/0.2 for Duotone and Threshold no longer match a key and are
 ignored (the filter shows its default colors); other keys stay valid.
+
+## Per-filter review (0.7.0 / kit 1.8.0)
+
+Each filter in the dropdown, checked against what it does: can a user set
+the aspects that matter for that function, with labels that say what higher
+values do, and without having to know SVG? Open for Markus's veto.
+
+| Filter | What it does | Controls now | Verdict |
+| --- | --- | --- | --- |
+| Soft blur, Solid-edge blur | Blur | Blur radius (px) | Fits. |
+| Duotone | Two colors by brightness | Shadow/Highlight color (global colors), presets with previews, *Swap colors* | Fits (0.3–0.5). |
+| Threshold | Two inks, split by brightness | Balance, Dark/Light ink, presets, *Swap colors* | Fits; *Balance* added in 0.4 (a threshold without a threshold point before). |
+| Posterize | Bands per channel | *Channels* switch, levels, darkest, brightest | Fits (0.4). |
+| Color tint | Hue/saturation from a color | Tint color, its opacity = strength | Strength was missing; added in 0.7 (kit 1.8). |
+| Film grain | Overlaid noise | Grain fineness, Grain strength | Two coupled weights replaced by one strength (0.6); "Grain size" was inverted (0.4). |
+| Living grain | Flickering grain | Grain fineness, Grain strength, Flicker cycle (s) | Strength was fixed at 50 %; added in 0.7. |
+| Paper relief | Lit fibre noise | Fibre fineness, Relief depth | Fits; label fixed in 0.4. |
+| RGB glitch | Channel offsets + sliced bands | Red/Blue shift (px), slice frequency pad, slice displacement (px) | Fits; the pad's noise swatch shows the bands. |
+| Rough edges | Displaced, busy edge | Jitter frequency, Edge roughness (px) | Fits; the live preview shows the effect. |
+| Water wave | Ripple displacement | Ripple frequency pad, Distortion strength (px) | Fits (pad 0.5). |
+| Gooey merge | Shapes fuse | Merge distance (px) | Fits; the edge sharpness stays fixed (one knob is the point of the effect). |
+| Outline only | Ring around the shape | Outline width (px), Outline color | Fits. |
+| Bevel | Glossy rim | Width (px), Depth, Highlight color, light direction dial | Fits (dial 0.5). |
+| Emboss | 3×3 kernel | Kernel grid, presets with previews | Fits: presets cover the common kernels, the grid stays for experts. |
+| Inner shadow | Inset shadow on text | Softness, offsets (px), color with opacity, presets | Fits; one opacity instead of two (0.5). |
+| Texture fill | Noise texture inside text | Vein frequency pad, Pattern variant, Vein/Base color, presets | Colors were fixed (multicolor matrix); now two colors with presets (0.7, look changes). |
+| Flowing water, Hue cycle | Animations | Flow/cycle time (s), Distortion strength (px) | Fits. |
+| Hover melt | Melts on hover | Melt frequency pad | Fits; the hover strength (45) lives in the kit's script, not tunable (limitation). |
+| Pointer light | Light follows the pointer | Light color, Surface bumpiness, Light height (px) | Fits. |
+| Refractive glass | Glass pane | — | Not offered in the plugin (category `glass`). |
+
+Considered and left out: a noise swatch next to single frequency sliders
+(the builder's live preview already shows the effect at the real size).
