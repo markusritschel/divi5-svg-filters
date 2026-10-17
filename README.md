@@ -41,7 +41,8 @@ _Blend_ you find:
 - **Tune ‹filter›** — the filter's tunable values as regular Divi fields:
   sliders with units (px, deg, s), Divi's color picker (including your global
   colors, which stay linked), pairs such as horizontal/vertical frequency,
-  level counts for Posterize, a 3×3 kernel for Emboss. The info button on a
+  levels for Posterize (for all channels together or each channel), a 3×3
+  kernel for Emboss. The info button on a
   field explains it in more detail. Some filters offer presets (Emboss: Sharpen,
   Find edges, …; Inner shadow: Soft, Hard, Glow, …); *Reset all* returns to the
   filter's defaults. Tuned elements get their own copy of the filter; untuned
@@ -105,6 +106,8 @@ render with Divi's own filters only. Uploaded filters remain in the database
 - The import message does not list what the cleaning removed.
 - Tunings of Duotone and Threshold saved before 0.3.0 no longer apply (the
   filters now use two colors); those elements show the default colors.
+- Posterize level counts set per channel with 0.3.0 no longer apply; choose
+  *Each channel* and set them again (darkest/brightest carry over).
 - Bevel's light direction is a slider (no angle wheel yet); frequency pairs
   are two sliders (no 2D pad yet).
 

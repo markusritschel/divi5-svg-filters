@@ -100,3 +100,7 @@
   three dual sliders Markus suggested. Global colors are now allowed
   (revises the base spec's "plain hex only"). Angle wheel and 2D pad are
   left for later.
+- 2026-10-17, Posterize channels (0.4.0): a "Channels" switch instead of
+  always showing nine fields; each mode reads only its own fields, so the
+  displayed values always match the output. Per-channel counts saved with
+  0.3.0 (released the same day) are not migrated.

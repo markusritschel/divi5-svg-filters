@@ -1,6 +1,6 @@
 # Tuning controls — design addendum
 
-Date: 2026-10-17 · Status: implemented in plugin 0.3.0 / kit 1.4.0; Markus can veto any point marked **(veto?)**
+Date: 2026-10-17 · Status: implemented in plugin 0.3.0 / kit 1.4.0, Posterize channels and Threshold balance in 0.4.0 / kit 1.5.0; Markus can veto any point marked **(veto?)**
 
 Found while building: Divi's color picker stores `rgba(…)` once the opacity
 is below 100 % (accepted and normalized); on the frontend Divi's block parser
@@ -65,8 +65,10 @@ with presets), Inner shadow (like Divi's Box Shadow, with presets).
    - color → `divi/color-picker` with global colors
    - `{pair}` (two numbers, e.g. `baseFrequency`) → two sliders
      "… horizontal" / "… vertical"
-   - `{levels}` (Posterize) → per channel one "levels" count (2–10), plus
-     shared "Darkest"/"Brightest" sliders; the list is spread evenly
+   - `{levels}` (Posterize) → a "Channels" switch (All together / Each
+     channel) with "Levels" (2–10), "Darkest" and "Brightest" once for all
+     channels or per channel (0.4.0, Markus's follow-up); the list is spread
+     evenly between darkest and brightest
    - `{matrix}` (Emboss) → custom field: 3×3 numeric grid
    - text → `divi/text` (other lists)
 7. **Presets**: a filter can carry `data-presets` (JSON: name → tweak values)
@@ -81,8 +83,9 @@ with presets), Inner shadow (like Divi's Box Shadow, with presets).
 
 `svgTune[<filter id>]` keeps one entry per **field**: `<tweak key>` for
 simple controls (values may carry the unit, `"40px"`, or a `$variable(…)$`),
-`<tweak key>@x` / `@y` for pairs, `<tweak key>@count` plus the filter-level
-`@min` / `@max` for levels. PHP (`Tweaks::compose`) and JS (`core.compose`)
+`<tweak key>@x` / `@y` for pairs; for levels the filter-level `@count` /
+`@min` / `@max`, or with `@channels: 'each'` `<tweak key>@count` / `@min` /
+`@max` (0.4.0; per-channel counts saved with 0.3.0 are dropped). PHP (`Tweaks::compose`) and JS (`core.compose`)
 turn field values into attribute values and validate them as before. Tunings
 saved with 0.1/0.2 for Duotone and Threshold no longer match a key and are
 ignored (the filter shows its default colors); other keys stay valid.

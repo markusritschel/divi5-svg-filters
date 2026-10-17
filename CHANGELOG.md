@@ -4,6 +4,23 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.4.0]
+
+### Added
+
+- Posterize: *Channels* switch — levels, darkest and brightest level for all
+  channels together or for red, green and blue separately.
+- Threshold: *Balance* moves the split between the two inks (kit 1.5.0).
+
+### Changed
+
+- Clearer labels: *Grain fineness*, *Fibre fineness* (kit 1.5.0).
+- Bundles the SVG Filter Kit 1.5.0.
+
+### Note
+
+- Posterize level counts set per channel with 0.3.0 no longer apply.
+
 ## [0.3.0]
 
 ### Changed
