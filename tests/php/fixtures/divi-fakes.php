@@ -92,6 +92,32 @@ namespace ET\Builder\Packages\GlobalData {
 	}
 }
 
+namespace ET\Builder\Packages\GlobalData {
+	class GlobalData {
+		/** Same logic as Divi 5.15.1's GlobalData::transform_state_into_global_color_value(). */
+		public static function transform_state_into_global_color_value( $css_variable, $settings ) {
+			if ( empty( $settings ) ) {
+				return $css_variable;
+			}
+			$hue          = $settings['hue'] ?? 0;
+			$saturation   = $settings['saturation'] ?? 0;
+			$lightness    = $settings['lightness'] ?? 0;
+			$opacity      = $settings['opacity'] ?? null;
+			$has_explicit = array_key_exists( 'opacity', $settings );
+			$printed      = null !== $opacity && ( 100 !== $opacity || $has_explicit ) ? ' / ' . ( $opacity / 100 ) : '';
+			$fmt          = static function ( $base, $adj ) {
+				return "calc({$base}" . ( $adj >= 0 ? ' + ' : ' - ' ) . abs( $adj ) . ')';
+			};
+			if ( 0 === (int) $hue && 0 === (int) $saturation && 0 === (int) $lightness && ( null === $opacity || ( 100 === (int) $opacity && ! $has_explicit ) ) ) {
+				return $css_variable;
+			}
+			$s = $fmt( 's', $saturation );
+			$s = $saturation < 0 ? "max(0, {$s})" : $s;
+			return "hsl(from {$css_variable} " . $fmt( 'h', $hue ) . " {$s} " . $fmt( 'l', $lightness ) . "{$printed})";
+		}
+	}
+}
+
 namespace ET\Builder\VisualBuilder\Assets {
 	class PackageBuildManager {
 		public static function register_package_build( $params ) {
