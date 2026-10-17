@@ -101,9 +101,25 @@ final class Builder {
 				'presets'   => __( 'Presets', 'divi5-svg-filters' ),
 				'horiz'     => __( 'horizontal', 'divi5-svg-filters' ),
 				'vert'      => __( 'vertical', 'divi5-svg-filters' ),
+				'channels'  => __( 'Channels', 'divi5-svg-filters' ),
+				'together'  => __( 'All together', 'divi5-svg-filters' ),
+				'each'      => __( 'Each channel', 'divi5-svg-filters' ),
+				'channelsDesc' => __( 'Set the levels once for all color channels, or for red, green and blue separately.', 'divi5-svg-filters' ),
+				'levels'    => __( 'Levels', 'divi5-svg-filters' ),
+				'levelsDesc' => __( 'Number of output levels per channel; more levels give more bands.', 'divi5-svg-filters' ),
 				'darkest'   => __( 'Darkest level', 'divi5-svg-filters' ),
 				'brightest' => __( 'Brightest level', 'divi5-svg-filters' ),
-				'levelsDesc' => __( 'Shared by all channels; the levels are spread evenly between darkest and brightest.', 'divi5-svg-filters' ),
+				'spreadDesc' => __( 'The levels are spread evenly between the darkest and the brightest level (0: none of the channel, 1: full).', 'divi5-svg-filters' ),
+				/* translators: %s: color channel, e.g. Red */
+				'darkestOf' => __( '%s darkest', 'divi5-svg-filters' ),
+				/* translators: %s: color channel, e.g. Red */
+				'brightestOf' => __( '%s brightest', 'divi5-svg-filters' ),
+				'channel'   => array(
+					'R' => __( 'Red', 'divi5-svg-filters' ),
+					'G' => __( 'Green', 'divi5-svg-filters' ),
+					'B' => __( 'Blue', 'divi5-svg-filters' ),
+					'A' => __( 'Alpha', 'divi5-svg-filters' ),
+				),
 				'desc'      => __( 'An SVG filter from the SVG Filter Kit or your uploads. Combined with the filters above in one declaration.', 'divi5-svg-filters' ),
 			),
 		);

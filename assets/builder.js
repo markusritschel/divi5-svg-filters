@@ -66,8 +66,13 @@
   /** Divi fields for one filter's controls; visible only while that filter is chosen. */
   function tuneFields(common, filterId) {
     var filter = D.filters[filterId];
-    var visible = function (e) {
+    var chosen = function (e) {
       return filterOf(e && e.attr) === filterId;
+    };
+    /** Level fields per channel ('@channels' 'each') or shared. */
+    var eachChannel = function (e) {
+      var tune = e.attr.desktop.value.svgTune;
+      return !!(tune && tune[filterId] && tune[filterId]["@channels"] === "each");
     };
     var fields = [];
     var field = function (
@@ -77,7 +82,13 @@
       dflt,
       component,
       features,
+      when,
     ) {
+      var visible = when
+        ? function (e) {
+            return chosen(e) && when(e);
+          }
+        : chosen;
       var tune = {};
       tune[filterId] = {};
       tune[filterId][fieldKey] = dflt;
@@ -151,29 +162,85 @@
           );
           break;
         case "levels":
+          var together = function (e) {
+            return !eachChannel(e);
+          };
+          if (c === levels[0]) {
+            field(
+              "@channels",
+              I.channels,
+              I.channelsDesc,
+              "all",
+              {
+                type: "field",
+                name: "divi/button-options",
+                props: {
+                  options: {
+                    all: { label: I.together },
+                    each: { label: I.each },
+                  },
+                  showLabel: true,
+                  fullwidth: true,
+                },
+              },
+            );
+            field(
+              "@count",
+              I.levels,
+              I.levelsDesc,
+              String(c.count),
+              range(2, 10, 1, ""),
+              null,
+              together,
+            );
+            field(
+              "@min",
+              I.darkest,
+              I.spreadDesc,
+              number(c.lo),
+              range(0, 1, 0.01, ""),
+              null,
+              together,
+            );
+            field(
+              "@max",
+              I.brightest,
+              I.spreadDesc,
+              number(c.hi),
+              range(0, 1, 0.01, ""),
+              null,
+              together,
+            );
+          }
+          var channel = /^feFunc([RGBA])\b/.exec(c.key);
+          var name = channel ? I.channel[channel[1]] : c.label;
           field(
             c.key + "@count",
             c.label,
             c.description,
             String(c.count),
             range(2, 10, 1, ""),
+            null,
+            eachChannel,
           );
-          if (c === levels[levels.length - 1]) {
-            field(
-              "@min",
-              I.darkest,
-              I.levelsDesc,
-              number(c.lo),
-              range(0, 1, 0.01, ""),
-            );
-            field(
-              "@max",
-              I.brightest,
-              I.levelsDesc,
-              number(c.hi),
-              range(0, 1, 0.01, ""),
-            );
-          }
+          field(
+            c.key + "@min",
+            I.darkestOf.replace("%s", name),
+            I.spreadDesc,
+            number(c.lo),
+            range(0, 1, 0.01, ""),
+            null,
+            eachChannel,
+          );
+          field(
+            c.key + "@max",
+            I.brightestOf.replace("%s", name),
+            I.spreadDesc,
+            number(c.hi),
+            range(0, 1, 0.01, ""),
+            null,
+            eachChannel,
+          );
           break;
         case "matrix":
           field(c.key, c.label, c.description, c.default, {

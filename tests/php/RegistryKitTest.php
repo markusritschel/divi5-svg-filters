@@ -46,7 +46,7 @@ final class RegistryKitTest extends TestCase {
 						$tune = array( $key . '@y' => (string) $c['max'] );
 						break;
 					case 'levels':
-						$tune = array( $key . '@count' => '3' );
+						$tune = array( '@channels' => 'each', $key . '@count' => '3' );
 						break;
 					case 'matrix':
 						$tune = array( $key => '0 -1 0 -1 5 -1 0 -1 0' );

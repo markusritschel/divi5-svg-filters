@@ -205,13 +205,28 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     assert.equal(await attrIn(glow, 'feFlood', 'flood-color'), '#ffffff', 'preset Glow color');
     assert.equal(await attrIn(glow, 'feGaussianBlur', 'stdDeviation'), '8', 'preset Glow softness');
 
+    // Posterize fields: 0 Channels, 1–3 shared count/darkest/brightest, 4–6 red, 7–9 green, 10–12 blue.
     await choose('fx-posterize');
-    const red = page.locator('.et-vb-field[class*="d5svgfTune_fx-posterize_0"] .et-vb-numeric-input-text input').first();
-    await red.scrollIntoViewIfNeeded();
-    await red.fill('2');
-    await red.press('Enter');
+    const posterField = (i) => page.locator(`.et-vb-field:is([class*="d5svgfTune_fx-posterize_${i} "], [class$="d5svgfTune_fx-posterize_${i}"])`).first();
+    const setLevel = async (i, value) => {
+      const input = posterField(i).locator('.et-vb-numeric-input-text input').first();
+      await input.scrollIntoViewIfNeeded();
+      await input.fill(value);
+      await input.press('Enter');
+      await page.waitForTimeout(800);
+    };
+    await setLevel(1, '2');
+    let poster = await copyOf();
+    assert.equal(await attrIn(poster, 'feFuncR', 'tableValues'), '0 1', 'all channels: red');
+    assert.equal(await attrIn(poster, 'feFuncB', 'tableValues'), '0 1', 'all channels: blue');
+    assert.equal(await posterField(4).isVisible(), false, 'per-channel fields hidden');
+    await posterField(0).locator('button[data-name="each"]').click();
     await page.waitForTimeout(800);
-    assert.equal(await attrIn(await copyOf(), 'feFuncR', 'tableValues'), '0 1', 'red levels');
+    assert.equal(await posterField(1).isVisible(), false, 'shared fields hidden');
+    await setLevel(6, '0.5');
+    poster = await copyOf();
+    assert.equal(await attrIn(poster, 'feFuncR', 'tableValues'), '0 0.166667 0.333333 0.5', 'each channel: red brightest');
+    assert.equal(await attrIn(poster, 'feFuncG', 'tableValues'), '0 .35 .7 1', 'each channel: green untouched');
 
     await choose('fx-duotone');
     const shadowField = page.locator('.et-vb-field[class*="d5svgfTune_fx-duotone_0"]').first();

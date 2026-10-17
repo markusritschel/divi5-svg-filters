@@ -148,16 +148,18 @@
       return out(number(x) + " " + number(y));
     }
     if (c.type === "levels") {
-      if (!has(tune, key + "@count") && !has(tune, "@min") && !has(tune, "@max")) {
+      // '@channels' 'each': per-channel fields '<key>@count|@min|@max'; otherwise the shared '@count|@min|@max'.
+      var prefix = tune["@channels"] === "each" ? key : "";
+      if (!has(tune, prefix + "@count") && !has(tune, prefix + "@min") && !has(tune, prefix + "@max")) {
         var saved = has(tune, key) ? list(tune[key]) : null; // saved by 0.1/0.2 as a plain list
         return saved !== null && saved !== list(c.default) ? out(saved) : null;
       }
       var num = function (value, min, max, fallback) {
         return clamp(value !== undefined && value !== "" && isFinite(value) ? Number(value) : fallback, min, max);
       };
-      var count = Math.round(num(tune[key + "@count"], LEVELS_MIN, LEVELS_MAX, c.count));
-      var lo = num(tune["@min"], 0, 1, c.lo);
-      var hi = num(tune["@max"], 0, 1, c.hi);
+      var count = Math.round(num(tune[prefix + "@count"], LEVELS_MIN, LEVELS_MAX, c.count));
+      var lo = num(tune[prefix + "@min"], 0, 1, c.lo);
+      var hi = num(tune[prefix + "@max"], 0, 1, c.hi);
       var levels = [];
       for (var i = 0; i < count; i++) levels.push(number(lo + ((hi - lo) * i) / (count - 1)));
       return out(levels.join(" "));
@@ -204,9 +206,10 @@
       } else if (c.type === "levels") {
         var lv = numbers(raw);
         if (lv.length >= LEVELS_MIN) {
+          fields["@channels"] = "each";
           fields[c.key + "@count"] = String(Math.min(LEVELS_MAX, lv.length));
-          fields["@min"] = number(Math.min.apply(null, lv));
-          fields["@max"] = number(Math.max.apply(null, lv));
+          fields[c.key + "@min"] = number(Math.min.apply(null, lv));
+          fields[c.key + "@max"] = number(Math.max.apply(null, lv));
         }
       } else {
         var l = list(raw);
