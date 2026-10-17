@@ -63,8 +63,8 @@ final class Frontend {
 	/** @var array<string, true> */
 	private $missing = array();
 
-	/** @var array<string, array<string, true>> preset class => elements that got a raised-specificity filter rule */
-	private $raised = array();
+	/** @var array<string, true> CSS already collected (presets are shared by many modules) */
+	private $seen = array();
 
 	/** @var array<string, array<string, string>> module name => element => selector template */
 	private $templates = array();
@@ -107,7 +107,7 @@ final class Frontend {
 		$chunks  = $this->chunks;
 		$defs    = $this->defs;
 		$missing = $this->missing;
-		$raised  = $this->raised;
+		$seen    = $this->seen;
 		try {
 			return $this->process( $html, $args );
 		} catch ( \Throwable $e ) {
@@ -115,7 +115,7 @@ final class Frontend {
 			$this->chunks  = $chunks;
 			$this->defs    = $defs;
 			$this->missing = $missing;
-			$this->raised  = $raised;
+			$this->seen    = $seen;
 			return $html;
 		}
 	}
@@ -163,27 +163,19 @@ final class Frontend {
 
 		// Divi's layers for this module, in cascade order. Our rules use a doubled class (so they beat
 		// Divi's equal rules even if Divi's CSS loads later). Once a layer has such a raised rule for an
-		// element, every later layer with Divi filter values is restated raised too, so "later layer
-		// wins" still holds exactly as in Divi.
-		$covered     = array();
+		// element, later layers with Divi filter values are restated raised too, so their Divi values
+		// still replace earlier ones as in Divi; the SVG filter carries over unless a layer sets its
+		// own or 'none' (decision 2026-10-17).
+		$states      = array();
 		$interactive = array();
 		foreach ( $this->layers( $name, $attrs, $order ) as $layer ) {
 			list( $group, $class, $layer_attrs ) = $layer;
-			$shared                              = 'module' !== $group;
 			foreach ( $templates as $element => $template ) {
-				if ( $shared && isset( $this->raised[ $class ][ $element ] ) ) {
-					$covered[ $element ] = true; // done for an earlier module with this preset
-					continue;
-				}
-				$selector = $prefix . str_replace( '{{selector}}', '.' . $class . '.' . $class, $template );
-				$kind     = '';
-				if ( $this->element( $group, $layer_attrs[ $element ]['decoration']['filters'] ?? null, $selector, $class, isset( $covered[ $element ] ), $kind ) ) {
-					$covered[ $element ] = true;
-					if ( $shared ) {
-						$this->raised[ $class ][ $element ] = true;
-					}
-				}
-				if ( '' !== $kind && ! $shared && 'module' === $element ) {
+				$states[ $element ] = $states[ $element ] ?? array( 'covered' => false, 'carry' => null, 'last' => null );
+				$selector           = $prefix . str_replace( '{{selector}}', '.' . $class . '.' . $class, $template );
+				$kind               = '';
+				$this->element( $group, $layer_attrs[ $element ]['decoration']['filters'] ?? null, $selector, $class, $states[ $element ], $kind );
+				if ( '' !== $kind && 'module' === $group && 'module' === $element ) {
 					$interactive = $kind;
 				}
 			}
@@ -199,34 +191,49 @@ final class Frontend {
 	/**
 	 * Rules for one Filters attribute of one layer.
 	 *
-	 * @param string     $group    Divi style group.
-	 * @param mixed      $filters  The Filters attribute (breakpoint => state => value).
-	 * @param string     $selector Raised selector for the element.
-	 * @param string     $class    Layer class (order class or preset class), salt for per-element copies.
-	 * @param bool       $covered  An earlier layer already has a raised filter rule for this element.
-	 * @param string|array $kind   Out: [kind, filter ID] for interactive filters.
-	 * @return bool Whether a raised `filter` rule was added for the element.
+	 * Element state across layers: covered (a raised filter rule exists), carry (the element-scope SVG
+	 * filter of the nearest earlier layer: [id, is copy] or null), last (the latest Filters attribute
+	 * with Divi filter values).
+	 *
+	 * @param string       $group    Divi style group.
+	 * @param mixed        $filters  The Filters attribute (breakpoint => state => value).
+	 * @param string       $selector Raised selector for the element.
+	 * @param string       $class    Layer class (order class or preset class), salt for per-element copies.
+	 * @param array        $state    In/out element state.
+	 * @param string|array $kind     Out: [kind, filter ID] for interactive filters.
 	 */
-	private function element( string $group, $filters, string $selector, string $class, bool $covered, &$kind ): bool {
+	private function element( string $group, $filters, string $selector, string $class, array &$state, &$kind ) {
 		if ( ! is_array( $filters ) ) {
-			return false;
+			return;
 		}
 		$value = $filters['desktop']['value'] ?? null;
 		$svg   = is_array( $value ) && is_string( $value['svgFilter'] ?? null ) ? $value['svgFilter'] : '';
 
 		if ( '' !== $svg && 'none' !== $svg && ! $this->registry()->has( $svg ) ) {
 			$this->missing[ $svg ] = true;
-			$svg                   = '';
+			$svg                   = ''; // like unset: an inherited filter stays
 		}
 
-		// No SVG filter here: only restate Divi's own values when an earlier raised rule would beat them.
-		$divi_only = $covered ? self::element_rules( $filters, $selector, '' ) : '';
-		if ( '' === $svg || 'none' === $svg ) {
-			if ( '' === $divi_only ) {
-				return false;
+		$divi_only = self::element_rules( $filters, $selector, '' );
+		$own_divi  = '' !== $divi_only;
+
+		if ( '' === $svg ) {
+			// Unset: keep the inherited SVG filter; this layer's own Divi values replace earlier ones.
+			if ( $state['covered'] && $own_divi ) {
+				$carry = $state['carry'];
+				$this->add( $group, null !== $carry && $carry[1], $carry ? self::element_rules( $filters, $selector, $carry[0] ) : $divi_only );
 			}
-			$this->chunks[] = array( 'group' => $group, 'copy' => false, 'css' => $divi_only );
-			return true;
+			$state['last'] = $own_divi ? $filters : $state['last'];
+			return;
+		}
+
+		if ( 'none' === $svg ) {
+			$state['carry'] = null;
+			if ( $state['covered'] ) {
+				$this->add( $group, false, $this->without_svg( $state, $own_divi ? $divi_only : '', $selector ) );
+			}
+			$state['last'] = $own_divi ? $filters : $state['last'];
+			return;
 		}
 
 		$interactive = self::INTERACTIVE[ $svg ] ?? '';
@@ -234,7 +241,7 @@ final class Frontend {
 		$copy        = $this->registry()->copy( $svg, is_array( $tune ) ? $tune : array(), '' !== $interactive ? $class : '' );
 		$filter_id   = $copy ? $copy['id'] : $svg;
 		if ( ! self::valid_class( $filter_id ) ) {
-			return false;
+			return;
 		}
 		if ( $copy ) {
 			$this->defs[ $filter_id ] = $copy['markup'];
@@ -244,13 +251,36 @@ final class Frontend {
 		}
 
 		if ( 'background' === ( $value['svgScope'] ?? 'element' ) ) {
-			// Divi's own filter stays on the element; restated only if an earlier raised rule would beat it.
-			$this->chunks[] = array( 'group' => $group, 'copy' => (bool) $copy, 'css' => self::background_rules( $selector, $filter_id, $svg ) . $divi_only );
-			return '' !== $divi_only;
+			// The element's own filter stays Divi's; an inherited raised rule must not keep its SVG filter.
+			$css            = self::background_rules( $selector, $filter_id, $svg );
+			$css           .= $state['covered'] ? $this->without_svg( $state, $own_divi ? $divi_only : '', $selector ) : '';
+			$state['carry'] = null;
+			$state['last']  = $own_divi ? $filters : $state['last'];
+			$this->add( $group, (bool) $copy, $css );
+			return;
 		}
 
-		$this->chunks[] = array( 'group' => $group, 'copy' => (bool) $copy, 'css' => self::element_rules( $filters, $selector, $filter_id ) );
-		return true;
+		$this->add( $group, (bool) $copy, self::element_rules( $filters, $selector, $filter_id ) );
+		$state['covered'] = true;
+		$state['carry']   = array( $filter_id, (bool) $copy );
+		$state['last']    = $own_divi ? $filters : $state['last'];
+	}
+
+	/** Raised rule without an SVG filter: own Divi values, else the latest earlier ones, else filter:none. */
+	private function without_svg( array $state, string $own, string $selector ): string {
+		if ( '' !== $own ) {
+			return $own;
+		}
+		$earlier = $state['last'] ? self::element_rules( $state['last'], $selector, '' ) : '';
+		return '' !== $earlier ? $earlier : $selector . '{filter:none}';
+	}
+
+	/** Collect CSS once (shared preset rules repeat for every module using the preset). */
+	private function add( string $group, bool $copy, string $css ) {
+		if ( '' !== $css && ! isset( $this->seen[ $css ] ) ) {
+			$this->seen[ $css ] = true;
+			$this->chunks[]     = array( 'group' => $group, 'copy' => $copy, 'css' => $css );
+		}
 	}
 
 	/**

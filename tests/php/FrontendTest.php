@@ -199,8 +199,9 @@ final class FrontendTest extends TestCase {
 		$this->assertLessThan( strpos( $out, '.et_pb_text_1.et_pb_text_1' ), strpos( $out, 'preset--group--filters--g1' ), 'presets before the module' );
 	}
 
-	public function test_a_modules_own_divi_filter_still_replaces_its_presets_svg_filter(): void {
-		// Divi: the module's own filter rule replaces the preset's whole filter (spike, page Spike2).
+	public function test_a_presets_svg_filter_stays_when_the_module_sets_own_divi_values(): void {
+		// Decision (Markus, 2026-10-17): the module's own Divi values replace the preset's Divi values
+		// (as in Divi), but the preset's SVG filter is kept.
 		$GLOBALS['fake_module_preset'] = array(
 			'class' => 'preset--module--divi-text--p1',
 			'attrs' => self::filters( array( 'svgFilter' => 'fx-wave', 'sepia' => '40%' ) ),
@@ -209,13 +210,13 @@ final class FrontendTest extends TestCase {
 		$this->render( 'divi/text-1', self::filters( array( 'blur' => '3px' ) ) );
 		$out = $this->footer()['out'];
 
-		$this->assertStringNotContainsString( '.et_pb_text_0.et_pb_text_0', $out, 'no own values: the preset applies' );
-		$this->assertStringContainsString( '.et_pb_text_1.et_pb_text_1{filter:blur(3px);}', $out, "own values restated so they still win over the preset's rule" );
+		$this->assertStringNotContainsString( '.et_pb_text_0.et_pb_text_0', $out, 'no own values: the preset rule applies' );
+		$this->assertStringContainsString( '.et_pb_text_1.et_pb_text_1{filter:url(#fx-wave) blur(3px);}', $out );
+		$this->assertSame( 1, substr_count( $out, 'preset--module--divi-text--p1.preset--module--divi-text--p1{' ), 'shared preset rule printed once' );
 		$this->assertLessThan( strpos( $out, '.et_pb_text_1.et_pb_text_1' ), strpos( $out, 'preset--module--divi-text--p1' ) );
 	}
 
-	public function test_a_later_preset_layer_with_divi_values_still_wins(): void {
-		// Divi order: module preset, then explicit group preset; the later one replaces the filter.
+	public function test_a_later_preset_layer_keeps_the_earlier_svg_filter_with_its_own_values(): void {
 		$GLOBALS['fake_module_preset'] = array(
 			'class' => 'preset--module--divi-text--p1',
 			'attrs' => self::filters( array( 'svgFilter' => 'fx-wave' ) ),
@@ -226,8 +227,41 @@ final class FrontendTest extends TestCase {
 		$this->render( 'divi/text-0', array() );
 		$out = $this->footer()['out'];
 
-		$this->assertStringContainsString( '.preset--group--filters--g2.preset--group--filters--g2{filter:contrast(130%);}', $out );
+		$this->assertStringContainsString( '.preset--group--filters--g2.preset--group--filters--g2{filter:url(#fx-wave) contrast(130%);}', $out );
 		$this->assertLessThan( strpos( $out, 'preset--group--filters--g2' ), strpos( $out, 'preset--module--divi-text--p1' ) );
+	}
+
+	public function test_none_switches_an_inherited_svg_filter_off(): void {
+		$GLOBALS['fake_module_preset'] = array(
+			'class' => 'preset--module--divi-text--p1',
+			'attrs' => self::filters( array( 'svgFilter' => 'fx-wave', 'sepia' => '40%' ) ),
+		);
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'none', 'blur' => '3px' ) ) );
+		$this->render( 'divi/text-1', self::filters( array( 'svgFilter' => 'none' ) ) );
+		$out = $this->footer()['out'];
+
+		$this->assertStringContainsString( '.et_pb_text_0.et_pb_text_0{filter:blur(3px);}', $out, 'own Divi values only' );
+		$this->assertStringContainsString( '.et_pb_text_1.et_pb_text_1{filter:sepia(40%);}', $out, "the preset's Divi values without the SVG filter" );
+	}
+
+	public function test_none_with_nothing_left_prints_filter_none(): void {
+		$GLOBALS['fake_module_preset'] = array(
+			'class' => 'preset--module--divi-text--p1',
+			'attrs' => self::filters( array( 'svgFilter' => 'fx-duotone' ) ),
+		);
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'none' ) ) );
+
+		$this->assertStringContainsString( '.et_pb_text_0.et_pb_text_0{filter:none}', $this->footer()['out'] );
+	}
+
+	public function test_the_modules_own_svg_filter_replaces_the_presets(): void {
+		$GLOBALS['fake_module_preset'] = array(
+			'class' => 'preset--module--divi-text--p1',
+			'attrs' => self::filters( array( 'svgFilter' => 'fx-wave', 'sepia' => '40%' ) ),
+		);
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-duotone' ) ) );
+
+		$this->assertStringContainsString( '.et_pb_text_0.et_pb_text_0{filter:url(#fx-duotone);}', $this->footer()['out'] );
 	}
 
 	public function test_background_scope_never_overrides_divis_positioning(): void {

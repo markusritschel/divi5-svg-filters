@@ -45,7 +45,7 @@ const templates = { module: '{{selector}}', content: '{{selector}} .et_pb_text_i
 const filters = (value, more = {}) => ({ module: { decoration: { filters: { desktop: { value, ...more } } } } });
 const has = (id) => ['fx-wave', 'fx-duotone', 'fx-spotlight'].includes(id);
 const copy = (id, tune, salt) => (salt || (tune && Object.keys(tune).length) ? { id: `${id}--copy${salt ? '-' + salt : ''}` } : null);
-const plan = (layers) => core.plan({ layers, templates, has, copy, interactive: { 'fx-spotlight': 'spotlight' } });
+const plan = (layers) => core.plan({ layers, templates, has, copy, interactive: { 'fx-spotlight': 'spotlight' }, functions: ['hueRotate', 'saturate', 'brightness', 'contrast', 'invert', 'sepia', 'opacity', 'blur'] });
 
 test('plan: element rule with raised selector, sub-elements, none and missing', () => {
   const p = plan([{ cls: 'm1', attrs: {
@@ -74,10 +74,34 @@ test('plan: background scope, interactive, later layers restated', () => {
     { cls: 'p1', shared: true, attrs: filters({ svgFilter: 'fx-wave', sepia: '40%' }) },
     { cls: 'm1', attrs: filters({ blur: '3px' }) },
   ]);
-  assert.deepEqual(layered.chunks.map((c) => [c.kind, c.selector, c.filterId]), [['element', '.p1.p1', 'fx-wave'], ['divi', '.m1.m1', '']]);
+  // The preset's SVG filter stays, the module's own Divi values replace the preset's (decision 2026-10-17).
+  assert.deepEqual(layered.chunks.map((c) => [c.kind, c.selector, c.filterId]), [['element', '.p1.p1', 'fx-wave'], ['element', '.m1.m1', 'fx-wave']]);
+  assert.equal(layered.chunks[1].filters.desktop.value.blur, '3px');
 
   const plain = plan([{ cls: 'p1', shared: true, attrs: filters({ sepia: '40%' }) }, { cls: 'm1', attrs: filters({ blur: '3px' }) }]);
   assert.equal(plain.chunks.length, 0, 'nothing of ours, nothing restated');
+});
+
+test('plan: a layer can raise its selector further (builder: module above shared preset rules)', () => {
+  const p = plan([
+    { cls: 'p1', shared: true, attrs: filters({ svgFilter: 'fx-wave' }) },
+    { cls: 'm1', repeat: 3, attrs: filters({ blur: '3px' }) },
+  ]);
+  assert.deepEqual(p.chunks.map((c) => c.selector), ['.p1.p1', '.m1.m1.m1']);
+});
+
+test('plan: none switches an inherited SVG filter off, own SVG filter replaces it', () => {
+  const preset = { cls: 'p1', shared: true, attrs: filters({ svgFilter: 'fx-wave', sepia: '40%' }) };
+  const kinds = (p) => p.chunks.slice(1).map((c) => [c.kind, c.selector, c.filterId || '', c.filters ? JSON.stringify(c.filters.desktop.value) : '']);
+
+  assert.deepEqual(kinds(plan([preset, { cls: 'm1', attrs: filters({ svgFilter: 'none', blur: '3px' }) }])),
+    [['divi', '.m1.m1', '', '{"svgFilter":"none","blur":"3px"}']], 'own Divi values only');
+  assert.deepEqual(kinds(plan([preset, { cls: 'm1', attrs: filters({ svgFilter: 'none' }) }])),
+    [['divi', '.m1.m1', '', '{"svgFilter":"fx-wave","sepia":"40%"}']], "the preset's Divi values without the SVG filter");
+  assert.deepEqual(kinds(plan([{ cls: 'p1', shared: true, attrs: filters({ svgFilter: 'fx-wave' }) }, { cls: 'm1', attrs: filters({ svgFilter: 'none' }) }])),
+    [['none', '.m1.m1', '', '']], 'nothing left: filter:none');
+  assert.deepEqual(kinds(plan([preset, { cls: 'm1', attrs: filters({ svgFilter: 'fx-duotone' }) }])),
+    [['element', '.m1.m1', 'fx-duotone', '{"svgFilter":"fx-duotone"}']]);
 });
 
 test('templates keep plain single selectors only (as Frontend::selector_templates)', () => {

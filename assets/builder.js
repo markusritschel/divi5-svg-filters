@@ -416,7 +416,10 @@
         var layers = [];
         var preset = presetLayer(ctx, attrs);
         if (preset) layers.push(preset);
-        layers.push({ cls: order, attrs: attrs, shared: false });
+        // Every module repeats the shared preset rules in its own <style>; a later module's copy
+        // must not beat this module's rules, so they get one more class (the frontend prints
+        // shared rules once, before all module rules).
+        layers.push({ cls: order, attrs: attrs, shared: false, repeat: 3 });
 
         var plan = core.plan({
           layers: layers,
@@ -426,6 +429,7 @@
           },
           copy: copy,
           interactive: D.interactive,
+          functions: Object.keys(D.functions),
         });
         if (plan.missing.length)
           warn("filter not found, not applied: " + plan.missing.join(", "));
@@ -435,6 +439,7 @@
         var rules = plan.chunks.map(function (c, i) {
           if (c.kind === "background")
             return core.backgroundCss(c.selector, c.filterId, c.base, D.edge);
+          if (c.kind === "none") return c.selector + "{filter:none}";
           return h(StyleStatements, {
             key: i,
             selectors: { desktop: { value: c.selector } },

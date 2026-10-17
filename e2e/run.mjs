@@ -104,15 +104,14 @@ test('frontend: spotlight elements have independent lights', async () => {
   await page.close();
 });
 
-test('presets: a module\'s own Divi filter still replaces its preset\'s (frontend and builder)', async () => {
+test('presets: the preset\'s SVG filter stays with own Divi values, None switches it off (frontend and builder)', async () => {
+  const expected = ['url("#fx-grain") sepia(0.4)', 'url("#fx-grain") blur(3px)', 'sepia(0.4)'];
   const { page } = await frontend('e2e-presets');
-  assert.equal(await style(page, '.et_pb_text_0'), 'url("#fx-grain") sepia(0.4)');
-  assert.equal(await style(page, '.et_pb_text_1'), 'blur(3px)');
+  for (const [i, filter] of expected.entries()) assert.equal(await style(page, `.et_pb_text_${i}`), filter, `frontend ${i}`);
   await page.close();
 
   const vb = await builder('e2e-presets');
-  assert.equal(await vb.appStyle(0), 'url("#fx-grain") sepia(0.4)');
-  assert.equal(await vb.appStyle(1), 'blur(3px)');
+  for (const [i, filter] of expected.entries()) assert.equal(await vb.appStyle(i), filter, `builder ${i}`);
   await vb.page.close();
 });
 

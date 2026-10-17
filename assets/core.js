@@ -100,47 +100,78 @@
    * Which rules a module needs (as Frontend::process/element).
    *
    * @param {object} args
-   *   layers: [{cls, attrs, shared}] in cascade order (presets first, the module last)
+   *   layers: [{cls, attrs, shared, repeat}] in cascade order (presets first, the module last);
+   *     repeat: how often the class is repeated in the selector (default 2)
    *   templates: element => selector template ('{{selector}} …')
    *   has(id): filter offered?
    *   copy(id, tune, salt): {id} of a tuned/instance copy, or null for the shared filter
    *   interactive: filter ID => kind ('spotlight', 'melt')
+   *   functions: Divi filter function keys (hueRotate, saturate, …)
    * @return {{chunks: Array, missing: string[], interactive: Array|null}}
-   *   chunk.kind: 'element' (url + Divi values), 'divi' (Divi values restated), 'background'
+   *   chunk.kind: 'element' (url + Divi values), 'divi' (Divi values restated),
+   *   'none' (filter:none), 'background'
    */
   function plan(args) {
     var chunks = [],
       missing = [],
       interactive = null,
-      covered = {};
+      states = {};
+
+    /** Any Divi filter value on any breakpoint/state (as Frontend: rules not empty). */
+    function hasDivi(filters) {
+      return Object.keys(filters).some(function (bp) {
+        var states = filters[bp];
+        return states && typeof states === "object" && Object.keys(states).some(function (s) {
+          var v = states[s];
+          return v && typeof v === "object" && args.functions.some(function (k) { return !!v[k]; });
+        });
+      });
+    }
+
+    /** Raised rule without an SVG filter: own Divi values, else the latest earlier ones, else filter:none. */
+    function withoutSvg(state, filters, own, selector) {
+      if (own) return { kind: "divi", selector: selector, filters: filters, filterId: "" };
+      if (state.last) return { kind: "divi", selector: selector, filters: state.last, filterId: "" };
+      return { kind: "none", selector: selector };
+    }
+
     args.layers.forEach(function (layer) {
       if (!valid(layer.cls)) return;
       Object.keys(args.templates).forEach(function (element) {
+        var state = (states[element] = states[element] || { covered: false, carry: null, last: null });
         var filters =
           layer.attrs &&
           layer.attrs[element] &&
           layer.attrs[element].decoration &&
           layer.attrs[element].decoration.filters;
         if (!filters || typeof filters !== "object") return;
+        // Class repeated (default twice) to raise specificity above Divi's own rules.
         var selector = args.templates[element].replace(
           "{{selector}}",
-          "." + layer.cls + "." + layer.cls,
+          new Array((layer.repeat || 2) + 1).join("." + layer.cls),
         );
         var value = (filters.desktop && filters.desktop.value) || {};
-        var svg =
-          typeof value.svgFilter === "string" && value.svgFilter !== "none"
-            ? value.svgFilter
-            : "";
-        if (svg && !args.has(svg)) {
+        var svg = typeof value.svgFilter === "string" ? value.svgFilter : "";
+        if (svg && svg !== "none" && !args.has(svg)) {
           if (missing.indexOf(svg) < 0) missing.push(svg);
-          svg = "";
+          svg = ""; // like unset: an inherited filter stays
         }
-        var restate = covered[element]
-          ? { kind: "divi", selector: selector, filters: filters, filterId: "" }
-          : null;
+        var own = hasDivi(filters);
+
         if (!svg) {
-          if (restate) chunks.push(restate);
-          covered[element] = covered[element] || !!restate;
+          // Unset: keep the inherited SVG filter; this layer's own Divi values replace earlier ones.
+          if (state.covered && own) {
+            chunks.push(state.carry
+              ? { kind: "element", selector: selector, filters: filters, filterId: state.carry.id, base: state.carry.base }
+              : { kind: "divi", selector: selector, filters: filters, filterId: "" });
+          }
+          if (own) state.last = filters;
+          return;
+        }
+        if (svg === "none") {
+          state.carry = null;
+          if (state.covered) chunks.push(withoutSvg(state, filters, own, selector));
+          if (own) state.last = filters;
           return;
         }
 
@@ -167,8 +198,10 @@
             base: svg,
             tune: tune,
           });
-          if (restate) chunks.push(restate);
-          covered[element] = covered[element] || !!restate;
+          // The element's own filter stays Divi's; an inherited raised rule must not keep its SVG filter.
+          if (state.covered) chunks.push(withoutSvg(state, filters, own, selector));
+          state.carry = null;
+          if (own) state.last = filters;
           return;
         }
         chunks.push({
@@ -179,7 +212,9 @@
           base: svg,
           tune: tune,
         });
-        covered[element] = true;
+        state.covered = true;
+        state.carry = { id: filterId, base: svg };
+        if (own) state.last = filters;
       });
     });
     return { chunks: chunks, missing: missing, interactive: interactive };
