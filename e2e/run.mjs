@@ -78,7 +78,7 @@ test('frontend: copies, background scope, sub-element, missing filter, Divi-only
   const t1 = await style(page, '.et_pb_text_1');
   assert.match(t1, /^url\("#fx-duotone--[0-9a-f]{8}"\)$/);
   const copyId = t1.slice(6, -2);
-  assert.equal(await page.evaluate((id) => document.getElementById(id)?.querySelector('feFuncR')?.getAttribute('tableValues'), copyId), '0.9 0.1');
+  assert.equal(await page.evaluate((id) => document.getElementById(id)?.querySelector('feFlood')?.getAttribute('flood-color'), copyId), '#e61919');
 
   assert.equal(await style(page, '.et_pb_text_2'), 'none');
   assert.equal(await style(page, '.et_pb_text_2', '::before'), 'url("#fx-wave")');
@@ -138,12 +138,15 @@ test('builder: fields, live preview, tuning, scope, save', async () => {
     await select.click();
     await select.locator('li[data-value="fx-duotone"]').click();
     await page.waitForTimeout(800);
-    await page.locator('.d5svgf-tune__toggle').click();
-    const first = page.locator('.d5svgf-tune__body input[type="text"]').first();
-    await first.fill('0.95 0.05');
-    await first.press('Enter');
+    // Shadow color through Divi's color field.
+    const shadow = page.locator('.et-vb-field[class*="d5svgfTune_fx-duotone_0"] input[type="text"]').first();
+    await shadow.scrollIntoViewIfNeeded();
+    await shadow.fill('ff0000');
+    await shadow.press('Enter');
     await page.waitForTimeout(1000);
-    assert.match(await appStyle(0), /^url\("#fx-duotone--v[0-9a-f]{8}"\) saturate\(1\.5\) blur\(1px\)$/, 'tuned copy');
+    const tuned = await appStyle(0);
+    assert.match(tuned, /^url\("#fx-duotone--v[0-9a-f]{8}"\) saturate\(1\.5\) blur\(1px\)$/, 'tuned copy');
+    assert.equal(await app.evaluate((id) => document.getElementById(id).querySelector('feFlood').getAttribute('flood-color'), tuned.slice(6, tuned.indexOf('")'))), '#ff0000');
 
     await page.locator('.et-vb-field-module-decoration-filters-svg-scope button[data-name="background"]').click();
     await page.waitForTimeout(800);
@@ -157,6 +160,85 @@ test('builder: fields, live preview, tuning, scope, save', async () => {
     const fe = await frontend('e2e-filters');
     assert.equal(await style(fe.page, '.et_pb_text_0'), 'saturate(1.5) blur(1px)');
     assert.match(await style(fe.page, '.et_pb_text_0', '::before'), /^url\("#fx-duotone--[0-9a-f]{8}"\)$/);
+    await fe.page.close();
+  } finally {
+    await vb.page.close();
+    resetPage('e2e-filters');
+  }
+});
+
+test('builder: presets, levels, global colors (builder and frontend)', async () => {
+  const vb = await builder('e2e-filters');
+  try {
+    const { page, app, appStyle } = vb;
+    const copyOf = async () => {
+      const f = await appStyle(0);
+      const m = /url\("#([^"]+)"\)/.exec(f);
+      return m ? m[1] : null;
+    };
+    const attrIn = (id, sel, attr) => app.evaluate(([id, sel, attr]) => document.getElementById(id)?.querySelector(sel)?.getAttribute(attr), [id, sel, attr]);
+    const choose = async (filterId) => {
+      const select = page.locator('#et-vb-module-decoration-filters--svgFilter');
+      await select.scrollIntoViewIfNeeded();
+      await select.click();
+      await select.locator(`li[data-value="${filterId}"]`).click();
+      await page.waitForTimeout(900);
+    };
+
+    await app.locator(MOD).nth(0).click();
+    await page.waitForTimeout(1500);
+    await page.getByRole('tab', { name: 'Design' }).or(page.locator('text=Design')).first().click();
+    await page.waitForTimeout(800);
+    await page.locator('text=Filters').first().click();
+    await page.waitForTimeout(1000);
+
+    await choose('fx-emboss');
+    await page.locator('.d5svgf-presets button', { hasText: 'Sharpen' }).click();
+    await page.waitForTimeout(800);
+    assert.equal(await attrIn(await copyOf(), 'feConvolveMatrix', 'kernelMatrix'), '0 -1 0 -1 5 -1 0 -1 0', 'preset Sharpen');
+    assert.equal(await page.locator('.d5svgf-matrix input').nth(4).inputValue(), '5', 'matrix shows the preset');
+
+    await choose('fx-inner-shadow');
+    await page.locator('.d5svgf-presets button', { hasText: 'Glow' }).click();
+    await page.waitForTimeout(800);
+    const glow = await copyOf();
+    assert.equal(await attrIn(glow, 'feFlood', 'flood-color'), '#ffffff', 'preset Glow color');
+    assert.equal(await attrIn(glow, 'feGaussianBlur', 'stdDeviation'), '8', 'preset Glow softness');
+
+    await choose('fx-posterize');
+    const red = page.locator('.et-vb-field[class*="d5svgfTune_fx-posterize_0"] .et-vb-numeric-input-text input').first();
+    await red.scrollIntoViewIfNeeded();
+    await red.fill('2');
+    await red.press('Enter');
+    await page.waitForTimeout(800);
+    assert.equal(await attrIn(await copyOf(), 'feFuncR', 'tableValues'), '0 1', 'red levels');
+
+    await choose('fx-duotone');
+    const shadowField = page.locator('.et-vb-field[class*="d5svgfTune_fx-duotone_0"]').first();
+    await shadowField.scrollIntoViewIfNeeded();
+    await shadowField.hover();
+    await shadowField.locator('button[aria-label="Dynamic Content Button"]').click();
+    await page.waitForTimeout(600);
+    await page.locator('li, [role="option"], [class*="item"]').filter({ hasText: /^Primary Color/ }).first().click();
+    await page.waitForTimeout(1000);
+    const global = await copyOf();
+    assert.equal(await attrIn(global, 'feFlood', 'style'), 'flood-color:var(--gcid-primary-color)', 'global color as CSS variable');
+    const primaryInBuilder = await app.evaluate((id) => getComputedStyle(document.getElementById(id).querySelector('feFlood')).floodColor, global);
+
+    await page.locator('button:has-text("Save")').first().click();
+    await page.waitForTimeout(6000);
+    assert.deepEqual(vb.errors, []);
+
+    const fe = await frontend('e2e-filters');
+    const f = await style(fe.page, '.et_pb_text_0');
+    const feCopy = /url\("#([^"]+)"\)/.exec(f)[1];
+    const flood = await fe.page.evaluate((id) => {
+      const el = document.getElementById(id).querySelector('feFlood');
+      return { style: el.getAttribute('style'), computed: getComputedStyle(el).floodColor };
+    }, feCopy);
+    assert.equal(flood.style, 'flood-color:var(--gcid-primary-color)');
+    assert.equal(flood.computed, primaryInBuilder, 'the global color resolves to the same color on the frontend');
+    assert.notEqual(flood.computed, 'rgb(26, 31, 97)', 'not the default shadow color');
     await fe.page.close();
   } finally {
     await vb.page.close();
