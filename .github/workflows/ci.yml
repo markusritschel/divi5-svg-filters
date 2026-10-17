@@ -31,5 +31,5 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: node --test tests/js/
+      - run: node --test tests/js/*.test.mjs
       - run: node --check assets/builder.js

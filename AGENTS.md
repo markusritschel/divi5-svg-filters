@@ -21,7 +21,7 @@ docker run --rm -u 1000:1000 -e COMPOSER_HOME=/tmp/composer -v "$PWD":/app -w /a
 # Unit tests: PHP (8.x locally and the minimum 7.4), JS, the bundled kit
 php vendor/bin/phpunit
 docker run --rm -u 1000:1000 -v "$PWD":/app -w /app php:7.4-cli php vendor/bin/phpunit
-node --test tests/js/
+node --test tests/js/*.test.mjs
 php kit/tests/loader-test.php
 
 # Browser tests: local WordPress + Divi 5 in Docker (port 8086), never in CI
