@@ -262,6 +262,14 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     const angle = page.locator('.et-vb-field:is([class*="d5svgfTune_fx-bevel_4 "], [class$="d5svgfTune_fx-bevel_4"]) .et-vb-numeric-input-text input').first();
     assert.equal(await angle.inputValue(), '179', 'slider follows the dial');
 
+    await choose('fx-tint');
+    assert.equal(await page.locator('.et-vb-field', { hasText: /Tint strength/i }).count(), 0, 'tint strength is the picker opacity');
+    await choose('fx-marble');
+    await page.locator('.d5svgf-presets button', { hasText: 'Malachite' }).click();
+    await page.waitForTimeout(800);
+    const marble = await copyOf();
+    assert.deepEqual([await attrIn(marble, 'feFlood', 'flood-color'), await attrIn(marble, 'feFlood:nth-of-type(2)', 'flood-color')], ['#0b3d2e', '#6fdcae'], 'Texture fill preset colors');
+
     await choose('fx-duotone');
     const sepia = page.locator('.d5svgf-presets button', { hasText: 'Sepia' });
     const swatchSvg = decodeURIComponent((await sepia.locator('img.d5svgf-presets__swatch').getAttribute('src')).replace('data:image/svg+xml,', ''));

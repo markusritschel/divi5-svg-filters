@@ -80,6 +80,12 @@ final class RegistryKitTest extends TestCase {
 		$blur = $r->get( 'fx-blur' )['controls']['feGaussianBlur|stdDeviation'];
 		$this->assertSame( array( 'Blur radius', 'Higher is softer', 'px' ), array( $blur['label'], $blur['description'], $blur['unit'] ) );
 		$this->assertArrayHasKey( 'Sharpen', $r->get( 'fx-emboss' )['presets'] );
+
+		// Opacity sliders next to a color become the picker's opacity.
+		$this->assertSame( 'alpha', $r->get( 'fx-inner-shadow' )['controls']['feFlood|flood-opacity']['type'] );
+		$this->assertSame( 'alpha', $r->get( 'fx-tint' )['controls']['feFlood|flood-opacity']['type'] );
+		$this->assertSame( '#e0705b', $r->get( 'fx-tint' )['controls']['feFlood|flood-color']['default_css'], 'full strength: plain hex default' );
+		$this->assertSame( array( 'color', 'color' ), array_values( array_intersect( array_column( $r->get( 'fx-marble' )['controls'], 'type' ), array( 'color' ) ) ) );
 	}
 
 	public function test_old_kit_without_metadata_lists_ids_without_tuning(): void {
