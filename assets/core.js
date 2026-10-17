@@ -127,7 +127,14 @@
       if (css === null && /^(?:var\(--gcid-[a-z0-9-]+\)|hsl\(from var\(--gcid-[a-z0-9-]+\)[a-z0-9\s(),.%+\-\/]*\))$/i.test(raw)) css = raw;
       if (css !== null) return { value: null, style: c.attr + ":" + css };
       var color = plainColor(raw);
-      return color !== null && color !== c.default ? out(color) : null;
+      return color !== null && color !== (c.default_css || c.default) ? out(color) : null;
+    }
+    if (c.type === "alpha") {
+      var linked = compose(c.color, tune);
+      var own = compose(Object.assign({}, c, { type: "range" }), tune);
+      // Untouched color, or a plain hex next to a value saved with the former opacity slider.
+      if (linked === null || (own !== null && linked.value !== null && linked.value.charAt(0) === "#")) return own;
+      return Math.abs(c.default - 1) < 1e-9 ? null : out("1");
     }
     if (c.type === "range") {
       if (!has(tune, key)) return null;
@@ -193,7 +200,14 @@
       if (!has(preset, c.key)) return;
       var raw = String(preset[c.key]);
       if (c.type === "color") {
-        if (/^#[0-9a-f]{6}$/i.test(raw)) fields[c.key] = raw.toLowerCase();
+        if (!/^#[0-9a-f]{6}$/i.test(raw)) return;
+        var alpha = c.alpha_key ? Number(has(preset, c.alpha_key) ? preset[c.alpha_key] : c.alpha) : 1;
+        fields[c.key] =
+          alpha >= 1 || !isFinite(alpha)
+            ? raw.toLowerCase()
+            : "rgba(" + [1, 3, 5].map(function (i) { return parseInt(raw.substr(i, 2), 16); }).join(", ") + ", " + number(clamp(alpha, 0, 1)) + ")";
+      } else if (c.type === "alpha") {
+        // set through the linked color
       } else if (c.type === "range") {
         var n = parseNumber(raw, c);
         if (n !== null) fields[c.key] = number(clamp(n, c.min, c.max)) + (c.unit || c.suffix || "");

@@ -42,6 +42,7 @@ final class Registry {
 				$control                      = Tweaks::control( (array) $tweak );
 				$controls[ $control['key'] ] = $control;
 			}
+			$controls = Tweaks::link( $controls );
 
 			$title              = trim( (string) ( $filter['title'] ?? '' ) );
 			$this->entries[ $id ] = array(

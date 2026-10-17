@@ -98,6 +98,34 @@ final class Tweaks {
 		return $control + array( 'type' => 'text', 'default' => $default );
 	}
 
+	/**
+	 * A color and a [0, 1] '<name>-opacity' range on the same primitive become one color field whose
+	 * opacity replaces the slider: the color gets alpha_key, alpha (default opacity) and default_css
+	 * (the default with that opacity), the range becomes type 'alpha' (1 once a color is chosen; see compose()).
+	 *
+	 * @param array $controls key => control() of one filter.
+	 * @return array The same, linked.
+	 */
+	public static function link( array $controls ): array {
+		foreach ( $controls as $key => $control ) {
+			if ( 'range' !== $control['type'] || ! preg_match( '/^(.+\|[a-z]+)-opacity$/', $key, $m ) ) {
+				continue;
+			}
+			$color_key = $m[1] . '-color';
+			if ( 'color' !== ( $controls[ $color_key ]['type'] ?? '' ) || 0.0 !== (float) $control['min'] || 1.0 !== (float) $control['max'] ) {
+				continue;
+			}
+			$alpha = (float) $control['default'];
+			$rgb   = sscanf( $controls[ $color_key ]['default'], '#%02x%02x%02x' );
+
+			$controls[ $color_key ]['alpha_key']   = $key;
+			$controls[ $color_key ]['alpha']       = $alpha;
+			$controls[ $color_key ]['default_css'] = $alpha < 1 ? sprintf( 'rgba(%d, %d, %d, %s)', $rgb[0], $rgb[1], $rgb[2], self::number( $alpha ) ) : $controls[ $color_key ]['default'];
+			$controls[ $key ] = array_merge( $control, array( 'type' => 'alpha', 'color' => $controls[ $color_key ] ) );
+		}
+		return $controls;
+	}
+
 	/** min, max, step, unit for a slider; without a hint range the demo site's default range. */
 	private static function range( array $hint, float $scale, float $value, string $unit ): array {
 		if ( '' !== $hint[1] ) {
@@ -141,7 +169,16 @@ final class Tweaks {
 					return array( 'value' => null, 'style' => $control['attr'] . ':' . $css );
 				}
 				$color = self::sanitize( $control, $raw );
-				return null !== $color && $color !== $control['default'] ? array( 'value' => $color, 'style' => null ) : null;
+				return null !== $color && $color !== ( $control['default_css'] ?? $control['default'] ) ? array( 'value' => $color, 'style' => null ) : null;
+
+			case 'alpha':
+				$color = self::compose( $control['color'], $tune );
+				$own   = self::compose( array_merge( $control, array( 'type' => 'range' ) ), $tune );
+				// Untouched color, or a plain hex next to a value saved with the former opacity slider.
+				if ( null === $color || ( null !== $own && null !== $color['value'] && '#' === $color['value'][0] ) ) {
+					return $own;
+				}
+				return self::is_default( $control, '1' ) ? null : array( 'value' => '1', 'style' => null );
 
 			case 'range':
 				if ( ! array_key_exists( $key, $tune ) ) {

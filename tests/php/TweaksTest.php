@@ -58,6 +58,51 @@ final class TweaksTest extends TestCase {
 		$this->assertSame( array( 'matrix', '-2 -1 0 -1 1 1 0 1 2' ), array( $matrix['type'], $matrix['default'] ) );
 	}
 
+	/* ---------- link(): color + opacity → one color field ---------- */
+
+	private function shadow(): array {
+		return Tweaks::link(
+			array(
+				'feFlood|flood-color'   => $this->control( '#000000', 'Shadow color', 'feFlood|flood-color' ),
+				'feFlood|flood-opacity' => $this->control( '.65', '[0, 1] Shadow opacity', 'feFlood|flood-opacity' ),
+			)
+		);
+	}
+
+	public function test_link_folds_opacity_into_the_color_field(): void {
+		$c = $this->shadow();
+
+		$this->assertSame( array( 'rgba(0, 0, 0, 0.65)', 'feFlood|flood-opacity', 0.65 ), array( $c['feFlood|flood-color']['default_css'], $c['feFlood|flood-color']['alpha_key'], $c['feFlood|flood-color']['alpha'] ) );
+		$this->assertSame( 'alpha', $c['feFlood|flood-opacity']['type'] );
+
+		$alone = Tweaks::link( array( 'x|flood-opacity' => $this->control( '.5', '[0, 1] Opacity', 'x|flood-opacity' ) ) );
+		$this->assertSame( 'range', $alone['x|flood-opacity']['type'], 'no color on the same primitive' );
+	}
+
+	/** @dataProvider alpha_cases */
+	public function test_compose_linked_color_and_opacity( array $tune, $color, $opacity ): void {
+		$c = $this->shadow();
+
+		$this->assertSame( $color, Tweaks::compose( $c['feFlood|flood-color'], $tune ), 'color' );
+		$this->assertSame( $opacity, Tweaks::compose( $c['feFlood|flood-opacity'], $tune ), 'opacity' );
+	}
+
+	public function alpha_cases(): array {
+		$v  = static function ( $value ) {
+			return array( 'value' => $value, 'style' => null );
+		};
+		$gc = '$variable({"type":"color","value":{"name":"gcid-primary-color","settings":{}}})$';
+		return array(
+			'untouched'                     => array( array(), null, null ),
+			'default as rgba'               => array( array( 'feFlood|flood-color' => 'rgba(0, 0, 0, 0.65)' ), null, null ),
+			'other alpha'                   => array( array( 'feFlood|flood-color' => 'rgba(255, 0, 0, 0.3)' ), $v( 'rgba(255, 0, 0, 0.3)' ), $v( '1' ) ),
+			'hex is fully opaque'           => array( array( 'feFlood|flood-color' => '#000000' ), $v( '#000000' ), $v( '1' ) ),
+			'global color'                  => array( array( 'feFlood|flood-color' => $gc ), array( 'value' => null, 'style' => 'flood-color:var(--gcid-primary-color)' ), $v( '1' ) ),
+			'saved slider, untouched color' => array( array( 'feFlood|flood-opacity' => '0.3' ), null, $v( '0.3' ) ),
+			'saved slider next to hex'      => array( array( 'feFlood|flood-color' => '#ff0000', 'feFlood|flood-opacity' => '0.3' ), $v( '#ff0000' ), $v( '0.3' ) ),
+		);
+	}
+
 	/* ---------- compose(): field values → attribute value / style ---------- */
 
 	/** @dataProvider compose_cases */

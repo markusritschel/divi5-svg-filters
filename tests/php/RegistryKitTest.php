@@ -48,6 +48,9 @@ final class RegistryKitTest extends TestCase {
 					case 'levels':
 						$tune = array( '@channels' => 'each', $key . '@count' => '3' );
 						break;
+					case 'alpha': // set through the linked color's opacity
+						$tune = array( $c['color']['key'] => 'rgba(10, 20, 30, 0.3)' );
+						break;
 					case 'matrix':
 						$tune = array( $key => '0 -1 0 -1 5 -1 0 -1 0' );
 						break;

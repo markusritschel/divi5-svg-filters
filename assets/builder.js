@@ -131,10 +131,12 @@
             c.key,
             c.label,
             c.description,
-            c.default,
+            c.default_css || c.default,
             { type: "field", name: "divi/color-picker", props: {} },
             { dynamicContent: { type: "color" } },
           );
+          break;
+        case "alpha": // the linked color picker's opacity
           break;
         case "range":
           field(

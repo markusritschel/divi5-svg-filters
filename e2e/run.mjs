@@ -202,7 +202,9 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     await page.locator('.d5svgf-presets button', { hasText: 'Glow' }).click();
     await page.waitForTimeout(800);
     const glow = await copyOf();
-    assert.equal(await attrIn(glow, 'feFlood', 'flood-color'), '#ffffff', 'preset Glow color');
+    assert.equal(await attrIn(glow, 'feFlood', 'flood-color'), 'rgba(255, 255, 255, 0.8)', 'preset Glow color with its opacity');
+    assert.equal(await attrIn(glow, 'feFlood', 'flood-opacity'), '1', 'opacity carried by the color');
+    assert.equal(await page.locator('.et-vb-field', { hasText: /Shadow opacity/i }).count(), 0, 'no separate opacity slider');
     assert.equal(await attrIn(glow, 'feGaussianBlur', 'stdDeviation'), '8', 'preset Glow softness');
 
     // Posterize fields: 0 Channels, 1–3 shared count/darkest/brightest, 4–6 red, 7–9 green, 10–12 blue.

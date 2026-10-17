@@ -65,6 +65,33 @@ test('compose mirrors Tweaks::compose (same cases as TweaksTest)', () => {
   }
 });
 
+// Linked as Tweaks::link() delivers them (Inner shadow).
+const shadowColor = { ...color, alpha_key: 'feFlood|flood-opacity', alpha: 0.65, default_css: 'rgba(0, 0, 0, 0.65)' };
+const shadowAlpha = { key: 'feFlood|flood-opacity', attr: 'flood-opacity', type: 'alpha', default: 0.65, min: 0, max: 1, step: 0.01, unit: '', suffix: '', color: shadowColor };
+
+test('compose: color with linked opacity (same cases as TweaksTest)', () => {
+  const cases = [
+    [{}, null, null],
+    [{ 'feFlood|flood-color': 'rgba(0, 0, 0, 0.65)' }, null, null],
+    [{ 'feFlood|flood-color': 'rgba(255, 0, 0, 0.3)' }, v('rgba(255, 0, 0, 0.3)'), v('1')],
+    [{ 'feFlood|flood-color': '#000000' }, v('#000000'), v('1')],
+    [{ 'feFlood|flood-color': gc }, { value: null, style: 'flood-color:var(--gcid-primary-color)' }, v('1')],
+    [{ 'feFlood|flood-opacity': '0.3' }, null, v('0.3')],
+    [{ 'feFlood|flood-color': '#ff0000', 'feFlood|flood-opacity': '0.3' }, v('#ff0000'), v('0.3')],
+  ];
+  for (const [tune, c, a] of cases) {
+    assert.deepEqual(core.compose(shadowColor, tune), c, `color ${JSON.stringify(tune)}`);
+    assert.deepEqual(core.compose(shadowAlpha, tune), a, `opacity ${JSON.stringify(tune)}`);
+  }
+});
+
+test('presetFields puts a linked opacity into the color', () => {
+  const filter = { controls: [shadowColor, shadowAlpha] };
+  assert.deepEqual(core.presetFields(filter, { 'feFlood|flood-color': '#FFFFFF', 'feFlood|flood-opacity': '.8' }), { 'feFlood|flood-color': 'rgba(255, 255, 255, 0.8)' });
+  assert.deepEqual(core.presetFields(filter, { 'feFlood|flood-color': '#ff0000' }), { 'feFlood|flood-color': 'rgba(255, 0, 0, 0.65)' });
+  assert.deepEqual(core.presetFields(filter, { 'feFlood|flood-color': '#ff0000', 'feFlood|flood-opacity': '1' }), { 'feFlood|flood-color': '#ff0000' });
+});
+
 test('composeAll keeps changed controls only, sorted by key', () => {
   const filter = { controls: [text, blur] };
   assert.deepEqual(core.composeAll(filter, { 'feGaussianBlur|stdDeviation': '8px', 'feFuncA|tableValues': '0.2 0.8', 'x|y': '1' }), { 'feFuncA|tableValues': v('0.2 0.8') });
