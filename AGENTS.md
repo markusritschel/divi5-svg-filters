@@ -3,7 +3,7 @@
 WordPress plugin that brings the SVG Filter Kit
 ([wp-svg-filters](https://github.com/markusritschel/wp-svg-filters)) into
 the Divi 5 Visual Builder: an "SVG filter" section inside Divi's Filters
-option group (dropdown, Element/Background scope, tuning fold-out), one
+option group (dropdown, Element/Background scope, tuning fields), one
 combined `filter:` declaration with Divi's own filter values, and an admin
 page for uploading custom SVG filters. Divi 5 only. Guiding rule: never
 break a page; if anything is missing, the SVG filter silently does not apply.
@@ -77,8 +77,10 @@ them. Unknown filters: no rule, console warning, option `d5svgf_missing`.
 `Tweaks`/`Frontend`, with `window.D5SVGF` data inline) and
 `assets/builder.js` for Divi's app iframe, `assets/builder.css` for the
 top-window panel. `builder.js` adds the fields through
-`divi.module.options.filters.group.fields`, registers the `d5svgf/tune`
-field component (writes `svgTune` per filter) and renders a `<style>` next to
+`divi.module.options.filters.group.fields`, registers its own field
+components (`d5svgf/tune-head` with presets and swap, `d5svgf/matrix`,
+`d5svgf/pad`, `d5svgf/dial`; pad and dial keep keyboard focus in a hidden
+input because Divi's shortcuts take arrow keys from anything else) and renders a `<style>` next to
 each module through `divi.module.wrapper.render`, using Divi's
 `StyleStatements`, the module's own attrs from the edit-post store and
 selector templates from the module-library store.

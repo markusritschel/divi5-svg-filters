@@ -104,3 +104,12 @@
   always showing nine fields; each mode reads only its own fields, so the
   displayed values always match the output. Per-channel counts saved with
   0.3.0 (released the same day) are not migrated.
+- 2026-10-17, intuitive controls (0.5.0): the dial and the 2D pad sit above
+  Divi's sliders instead of replacing them (keeps Divi's numeric input). They
+  keep keyboard focus in a visually hidden input: Divi's keyboard-shortcuts
+  handler takes arrow keys from every element except inputs, textareas and
+  contenteditable (ArrowUp/Down switched the selected module). Preset
+  swatches are SVG data images, because inline SVG in a Divi button is
+  restyled by the builder's icon CSS. Inner shadow's opacity moved into the
+  color picker; values saved with the former slider still apply next to a
+  plain hex color.

@@ -40,12 +40,15 @@ _Blend_ you find:
   Divi's own filters stay on the element).
 - **Tune ‹filter›** — the filter's tunable values as regular Divi fields:
   sliders with units (px, deg, s), Divi's color picker (including your global
-  colors, which stay linked), pairs such as horizontal/vertical frequency,
-  levels for Posterize (for all channels together or each channel), a 3×3
-  kernel for Emboss. The info button on a
-  field explains it in more detail. Some filters offer presets (Emboss: Sharpen,
-  Find edges, …; Inner shadow: Soft, Hard, Glow, …); *Reset all* returns to the
-  filter's defaults. Tuned elements get their own copy of the filter; untuned
+  colors, which stay linked; its opacity is the shadow's opacity for Inner
+  shadow), a 2D pad plus two sliders for horizontal/vertical frequencies
+  (with a noise swatch), a dial for Bevel's light direction (the dot shows
+  where the light comes from), levels for Posterize (for all channels
+  together or each channel), a 3×3 kernel for Emboss. The info button on a
+  field explains it in more detail. Some filters offer presets with a preview
+  (Duotone, Threshold, Emboss, Inner shadow); *Swap colors* exchanges the two
+  colors of Duotone and Threshold; *Reset all* returns to the filter's
+  defaults. Tuned elements get their own copy of the filter; untuned
   ones share the standard one.
 
 Sub-elements (e.g. a Text module's text) get the same fields when you enable
@@ -108,8 +111,6 @@ render with Divi's own filters only. Uploaded filters remain in the database
   filters now use two colors); those elements show the default colors.
 - Posterize level counts set per channel with 0.3.0 no longer apply; choose
   *Each channel* and set them again (darkest/brightest carry over).
-- Bevel's light direction is a slider (no angle wheel yet); frequency pairs
-  are two sliders (no 2D pad yet).
 
 ## Development
 

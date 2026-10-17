@@ -75,9 +75,16 @@ with presets), Inner shadow (like Divi's Box Shadow, with presets).
    in the kit; the plugin shows them as one-click buttons above the fields.
    First users: Emboss (Emboss, Sharpen, Find edges, Soften) and Inner shadow
    (Soft, Hard, Wide, Top, Glow).
-8. **Later** (not in this release): angle wheel for Bevel (a `deg` slider for
-   now), 2D pad for frequency pairs (two sliders for now), preset preview
-   swatches (text buttons for now).
+8. **Added in 0.5.0** (Markus's follow-up, "as intuitive as possible"):
+   - dial above the slider for 0–360° angles (Bevel's light direction: the
+     dot shows where the light comes from),
+   - 2D pad above the two sliders for `{pair}`, with a noise swatch for
+     turbulence frequencies,
+   - preset buttons with a preview swatch (gradient tile with "Aa" through
+     the filter, as an SVG data image),
+   - a color and a [0, 1] `<name>-opacity` range on one primitive become one
+     color field (`Tweaks::link`): Inner shadow's opacity is the picker's,
+   - *Swap colors* for two-color filters; Duotone/Threshold presets (kit 1.6.0).
 
 ## Storage
 

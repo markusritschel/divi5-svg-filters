@@ -4,6 +4,23 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.5.0]
+
+### Added
+
+- Bevel: a dial for the light direction (the dot shows where the light comes
+  from), above the slider.
+- Frequency pairs (Water wave, Texture fill, Refractive glass, RGB glitch,
+  Hover melt): a 2D pad with a noise swatch above the two sliders.
+- Preset buttons show a preview of the preset.
+- Duotone and Threshold: color presets (kit 1.6.0) and *Swap colors*.
+
+### Changed
+
+- Inner shadow: the shadow's opacity is set with the color picker's opacity
+  instead of a separate slider (saved values still apply).
+- Bundles the SVG Filter Kit 1.6.0.
+
 ## [0.4.0]
 
 ### Added
