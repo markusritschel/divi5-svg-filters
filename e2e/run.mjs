@@ -231,6 +231,14 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     assert.equal(await attrIn(poster, 'feFuncG', 'tableValues'), '0 .35 .7 1', 'each channel: green untouched');
 
     await choose('fx-duotone');
+    await page.locator('.d5svgf-presets button', { hasText: 'Sepia' }).click();
+    await page.waitForTimeout(800);
+    let duo = await copyOf();
+    assert.deepEqual([await attrIn(duo, 'feFlood', 'flood-color'), await attrIn(duo, 'feFlood:nth-of-type(2)', 'flood-color')], ['#2e1d0f', '#f2dfc0'], 'preset Sepia');
+    await page.locator('.d5svgf-tune-head__swap').click();
+    await page.waitForTimeout(800);
+    duo = await copyOf();
+    assert.deepEqual([await attrIn(duo, 'feFlood', 'flood-color'), await attrIn(duo, 'feFlood:nth-of-type(2)', 'flood-color')], ['#f2dfc0', '#2e1d0f'], 'swapped');
     const shadowField = page.locator('.et-vb-field[class*="d5svgfTune_fx-duotone_0"]').first();
     await shadowField.scrollIntoViewIfNeeded();
     await shadowField.hover();
