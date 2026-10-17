@@ -52,9 +52,11 @@ The pointer filters (_Pointer light_, _Hover melt_) react per element.
 ### Presets
 
 The SVG filter is part of the Filters group, so it is saved in element and
-option-group presets. Divi's rule applies unchanged: if an element sets its
-own Filters values, they replace the preset's whole filter (including the
-SVG part), just as they replace a preset's sepia or blur.
+option-group presets. An element using such a preset keeps the preset's SVG
+filter even when it sets its own Filters values; those own values replace
+the preset's Divi values (sepia, blur, …) as usual in Divi. To drop the
+preset's SVG filter on one element, choose **None** there; choosing another
+SVG filter replaces it.
 
 ### Your own filters
 

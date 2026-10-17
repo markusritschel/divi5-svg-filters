@@ -77,13 +77,13 @@ flagged for Markus (presets + own Divi values, see risk 3b).
   module class that **replaces** the preset's whole `filter:` (A: preset only →
   `sepia(0.4)`; B: preset + own `blur(3px)` → `blur(3px)`, sepia gone).
   Builder and frontend agree.
-- **Decision for Markus:** the plan follows Divi's rule (conservative). The
-  preset class gets "preset SVG + preset Divi values", the module class gets
-  "module SVG + module Divi values". Consequence: an element that uses an SVG
-  preset _and_ sets any own Divi filter loses the preset's SVG filter, exactly
-  as it loses the preset's sepia today. Alternative: the module rule falls back
-  to the preset's `svgFilter` when the module has none (more intuitive, but
-  deviates from Divi's semantics and must be mirrored in the builder).
+- **Decided (Markus, 2026-10-17): keep the preset's SVG filter.** A layer
+  without its own `svgFilter` inherits the nearest earlier layer's SVG
+  filter; its own Divi values still replace earlier Divi values (Divi's
+  rule). `svgFilter: 'none'` switches an inherited SVG filter off; an own
+  SVG filter replaces it. Implemented in 0.2.0 (frontend and builder); until
+  then (0.1.0) the module's own Divi values dropped the preset's SVG filter
+  too, mirroring Divi.
 
 ### Visual Builder (JS)
 

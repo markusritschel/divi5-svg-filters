@@ -262,10 +262,10 @@ Filters attr path, `desktop.value.{ svgFilter: 'fx-duotone', svgScope: 'element'
       `GlobalPreset::get_selected_preset()` (module preset stack via
       `modulePreset`) and `get_selected_group_presets()`; emit rules for the
       preset class `preset--module--<module>--<id>` from the preset's attrs
-      (merged `styleAttrs` as Divi does). Follow Divi's replace rule: the
-      module rule uses only the module's own `svgFilter` (pending Markus's
-      decision, see findings "Presets"). Unit-test with the spike's preset
-      fixture.
+      (merged `styleAttrs` as Divi does). Decided 2026-10-17 (0.2.0): a
+      layer without its own `svgFilter` keeps the preset's SVG filter with
+      its own Divi values; `none` switches it off (findings "Presets").
+      Unit-test with the spike's preset fixture.
 
 ## Phase 5 — Visual Builder controls (revised after spike)
 

@@ -66,8 +66,10 @@ Every Filters attribute with `svgFilter` gets rules from Divi's own
 `Utils::style_statements()` with a declaration "url(#id) + Divi's filter
 functions", so breakpoints, hover and sticky match Divi. Selectors are
 Divi's prefix + the order/preset class doubled + the module.json element
-selector; later layers with Divi values are restated so "later layer wins"
-still holds. Copies go into the kit's defs via `svgf_extra_defs`; rules
+selector; later layers with Divi values are restated so their Divi values
+still win as in Divi, while the nearest earlier SVG filter carries over
+unless a layer sets its own or `none` (Markus's decision, 0.2.0). Copies go
+into the kit's defs via `svgf_extra_defs`; rules
 print in `wp_footer` after the defs, copy rules only if the defs included
 them. Unknown filters: no rule, console warning, option `d5svgf_missing`.
 

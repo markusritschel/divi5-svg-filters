@@ -20,7 +20,8 @@
 - 2026-10-16, Phase 4 presets: conservative choice, the plugin mirrors
   Divi's own rule (a module's own Filters values replace the preset's whole
   `filter:`, SVG part included). Flagged for Markus in
-  `docs/spike-findings.md` → "Presets".
+  `docs/spike-findings.md` → "Presets". **Superseded 2026-10-17:** Markus
+  chose to keep the preset's SVG filter (0.2.0); `none` switches it off.
 - 2026-10-16, Phase 1: kit work happens on a new kit branch `plugin-hooks` in
   a git worktree (`~/Code/wp-svg-filters/.claude/worktrees/plugin-hooks`), so
   Markus's kit checkout and `main` stay untouched. `.claude/` added to the
