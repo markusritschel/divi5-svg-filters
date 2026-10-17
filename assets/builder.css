@@ -19,6 +19,11 @@
   font-weight: 600;
 }
 
+.d5svgf-tune-head__actions {
+  display: flex;
+  gap: 12px;
+}
+
 .d5svgf-tune-head__reset {
   background: none;
   border: 0;

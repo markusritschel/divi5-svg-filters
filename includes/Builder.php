@@ -99,6 +99,7 @@ final class Builder {
 				'tune'      => __( 'Tune %s', 'divi5-svg-filters' ),
 				'reset'     => __( 'Reset all', 'divi5-svg-filters' ),
 				'presets'   => __( 'Presets', 'divi5-svg-filters' ),
+				'swap'      => __( 'Swap colors', 'divi5-svg-filters' ),
 				'horiz'     => __( 'horizontal', 'divi5-svg-filters' ),
 				'vert'      => __( 'vertical', 'divi5-svg-filters' ),
 				'channels'  => __( 'Channels', 'divi5-svg-filters' ),

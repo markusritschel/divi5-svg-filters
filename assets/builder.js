@@ -346,6 +346,20 @@
     };
     var presets = filter.presets || {};
     var names = Object.keys(presets);
+    var colors = filter.controls.filter(function (c) {
+      return c.type === "color";
+    });
+    var swap = function () {
+      var next = Object.assign({}, mine || {});
+      var current = colors.map(function (c) {
+        return Object.prototype.hasOwnProperty.call(next, c.key)
+          ? next[c.key]
+          : c.default_css || c.default;
+      });
+      next[colors[0].key] = current[1];
+      next[colors[1].key] = current[0];
+      write(next);
+    };
     return h(
       "div",
       { className: "d5svgf-tune-head" },
@@ -357,19 +371,34 @@
           { className: "d5svgf-tune-head__title" },
           I.tune.replace("%s", filter.label),
         ),
-        mine
-          ? h(
-              "button",
-              {
-                type: "button",
-                className: "d5svgf-tune-head__reset",
-                onClick: function () {
-                  write(null);
+        h(
+          "span",
+          { className: "d5svgf-tune-head__actions" },
+          colors.length === 2
+            ? h(
+                "button",
+                {
+                  type: "button",
+                  className: "d5svgf-tune-head__reset d5svgf-tune-head__swap",
+                  onClick: swap,
                 },
-              },
-              I.reset,
-            )
-          : null,
+                I.swap,
+              )
+            : null,
+          mine
+            ? h(
+                "button",
+                {
+                  type: "button",
+                  className: "d5svgf-tune-head__reset",
+                  onClick: function () {
+                    write(null);
+                  },
+                },
+                I.reset,
+              )
+            : null,
+        ),
       ),
       names.length
         ? h(
