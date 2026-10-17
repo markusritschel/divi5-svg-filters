@@ -42,6 +42,19 @@
   margin-top: 10px;
 }
 
+/* Visually hidden keyboard input of the pad and the dial. */
+.d5svgf-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  opacity: 0;
+}
+
 /* 2D pad for horizontal/vertical pairs, with a noise swatch. */
 .d5svgf-pad-row {
   display: flex;
@@ -63,7 +76,7 @@
   overflow: hidden;
 }
 
-.d5svgf-pad:focus-visible {
+.d5svgf-pad:focus-within {
   outline: 2px solid #2b87da;
   outline-offset: 1px;
 }
@@ -120,6 +133,48 @@
   flex: none;
   align-self: center;
   border-radius: 3px;
+}
+
+/* Angle dial (light direction). */
+.d5svgf-dial {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  cursor: grab;
+  touch-action: none;
+}
+
+.d5svgf-dial:focus-within {
+  outline: 2px solid #2b87da;
+  outline-offset: 2px;
+}
+
+.d5svgf-dial__ring {
+  fill: none;
+  stroke: rgba(127, 127, 127, 0.35);
+  stroke-width: 2;
+}
+
+.d5svgf-dial__ray {
+  stroke: rgba(43, 135, 218, 0.5);
+  stroke-width: 2;
+}
+
+.d5svgf-dial__center {
+  fill: rgba(127, 127, 127, 0.5);
+}
+
+.d5svgf-dial__dot {
+  fill: #f5b700;
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.d5svgf-dial__value {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
 }
 
 /* 3×3 kernel grid. */

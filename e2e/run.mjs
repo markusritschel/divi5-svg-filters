@@ -239,13 +239,28 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     // Clicks land on whole pixels: allow a step either way.
     const [px, py] = (await attrIn(await copyOf(), 'feTurbulence', 'baseFrequency')).split(' ').map(Number);
     assert.ok(Math.abs(px - 0.05) <= 0.002 && Math.abs(py - 0.075) <= 0.002, `pad sets both frequencies (${px} ${py})`);
-    await pad.press('ArrowRight');
+    await pad.locator('input').press('ArrowRight');
     await page.waitForTimeout(800);
-    const stepped = `${Math.round((px + 0.001) * 1000) / 1000} ${py}`;
+    await pad.locator('input').press('ArrowUp');
+    await page.waitForTimeout(800);
+    const stepped = `${Math.round((px + 0.001) * 1000) / 1000} ${Math.round((py + 0.001) * 1000) / 1000}`;
     assert.equal(await attrIn(await copyOf(), 'feTurbulence', 'baseFrequency'), stepped, 'arrow key steps');
     const horiz = page.locator('.et-vb-field:is([class*="d5svgfTune_fx-wave_1 "], [class$="d5svgfTune_fx-wave_1"]) .et-vb-numeric-input-text input').first();
     assert.equal(await horiz.inputValue(), stepped.split(' ')[0], 'slider follows the pad');
     assert.equal(await page.locator('.d5svgf-pad__noise feTurbulence').getAttribute('baseFrequency'), stepped, 'noise swatch follows');
+
+    await choose('fx-bevel');
+    const dial = page.locator('.d5svgf-dial svg');
+    await dial.scrollIntoViewIfNeeded();
+    await dial.click({ position: { x: 8, y: 36 } }); // left of the center: light from the left
+    await page.waitForTimeout(800);
+    assert.equal(await attrIn(await copyOf(), 'feDistantLight', 'azimuth'), '180', 'dial sets the light direction');
+    // Divi's shortcuts take arrow keys from everything but inputs; the dial keeps focus in one.
+    await page.locator('.d5svgf-dial input').press('ArrowDown');
+    await page.waitForTimeout(800);
+    assert.equal(await attrIn(await copyOf(), 'feDistantLight', 'azimuth'), '179', 'dial arrow key');
+    const angle = page.locator('.et-vb-field:is([class*="d5svgfTune_fx-bevel_4 "], [class$="d5svgfTune_fx-bevel_4"]) .et-vb-numeric-input-text input').first();
+    assert.equal(await angle.inputValue(), '179', 'slider follows the dial');
 
     await choose('fx-duotone');
     await page.locator('.d5svgf-presets button', { hasText: 'Sepia' }).click();

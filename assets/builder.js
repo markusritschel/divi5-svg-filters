@@ -144,10 +144,19 @@
         case "alpha": // the linked color picker's opacity
           break;
         case "range":
+          var dial = c.unit === "deg" && c.min === 0 && c.max === 360;
+          if (dial) {
+            // A full turn: a dial above the slider, both on the same value.
+            field(c.key, c.label, c.description, withUnit(c.default, c), {
+              type: "field",
+              name: "d5svgf/dial",
+              props: { fallback: c.default },
+            });
+          }
           field(
             c.key,
-            c.label,
-            c.description,
+            dial ? "" : c.label,
+            dial ? "" : c.description,
             withUnit(c.default, c),
             range(c.min, c.max, c.step, c.unit),
           );
@@ -536,6 +545,7 @@
       ArrowUp: [0, 1],
       ArrowDown: [0, -1],
     };
+    var input = React.useRef(null);
     return h(
       "div",
       { className: "d5svgf-pad-row" },
@@ -543,12 +553,9 @@
         "div",
         {
           className: "d5svgf-pad",
-          tabIndex: 0,
-          role: "group",
-          "aria-label":
-            I.horiz + " " + number(shown[0]) + ", " + I.vert + " " + number(shown[1]),
           onPointerDown: function (e) {
             e.currentTarget.setPointerCapture(e.pointerId);
+            if (input.current) input.current.focus();
             drag[1](at(e));
           },
           onPointerMove: function (e) {
@@ -559,6 +566,15 @@
             commit(at(e));
             drag[1](null);
           },
+        },
+        // Keyboard focus on an input: Divi's shortcuts take arrow keys from anything else.
+        h("input", {
+          ref: input,
+          type: "text",
+          readOnly: true,
+          className: "d5svgf-sr",
+          value: number(shown[0]) + " " + number(shown[1]),
+          "aria-label": I.horiz + " / " + I.vert,
           onKeyDown: function (e) {
             var d = keys[e.key];
             if (!d) return;
@@ -569,7 +585,7 @@
               snap(saved[1] + d[1] * step * f),
             ]);
           },
-        },
+        }),
         h("span", {
           className: "d5svgf-pad__line d5svgf-pad__line--x",
           style: { bottom: pct(shown[1]) },
@@ -610,7 +626,92 @@
     );
   }
 
+  /**
+   * Dial for a 0–360° angle (light direction): the dot shows where the light comes from
+   * (SVG azimuth: 0° from the right, clockwise). Drag (Shift: 15° steps) or arrow keys;
+   * written on release.
+   */
+  function Dial(props) {
+    var saved = parseFloat(props.value);
+    if (!isFinite(saved)) saved = props.fallback || 0;
+    var drag = React.useState(null);
+    var shown = drag[0] !== null ? drag[0] : saved;
+    var norm = function (a) {
+      return ((Math.round(a) % 360) + 360) % 360;
+    };
+    var commit = function (a) {
+      props.onChange({ inputValue: norm(a) + "deg" });
+    };
+    var at = function (e) {
+      var r = e.currentTarget.getBoundingClientRect();
+      var a =
+        (Math.atan2(
+          e.clientY - (r.top + r.height / 2),
+          e.clientX - (r.left + r.width / 2),
+        ) *
+          180) /
+        Math.PI;
+      return norm(e.shiftKey ? Math.round(a / 15) * 15 : a);
+    };
+    var rad = (shown * Math.PI) / 180;
+    var x = 36 + 26 * Math.cos(rad);
+    var y = 36 + 26 * Math.sin(rad);
+    var input = React.useRef(null);
+    return h(
+      "div",
+      {
+        className: "d5svgf-dial",
+        onPointerDown: function (e) {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          if (input.current) input.current.focus();
+          drag[1](at(e));
+        },
+        onPointerMove: function (e) {
+          if (drag[0] !== null) drag[1](at(e));
+        },
+        onPointerUp: function (e) {
+          if (drag[0] === null) return;
+          commit(at(e));
+          drag[1](null);
+        },
+      },
+      // Keyboard focus on an input: Divi's shortcuts take arrow keys from anything else.
+      h("input", {
+        ref: input,
+        type: "range",
+        className: "d5svgf-sr",
+        min: 0,
+        max: 359,
+        value: shown,
+        "aria-label": props.label || "",
+        "aria-valuetext": shown + "°",
+        onChange: function (e) {
+          commit(Number(e.target.value));
+        },
+        onKeyDown: function (e) {
+          var d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+          if (!d) return;
+          e.preventDefault();
+          commit(saved + d * (e.shiftKey ? 15 : 1));
+        },
+      }),
+      h(
+        "svg",
+        { width: 72, height: 72, viewBox: "0 0 72 72", "aria-hidden": true },
+        h("circle", { className: "d5svgf-dial__ring", cx: 36, cy: 36, r: 26 }),
+        h("line", { className: "d5svgf-dial__ray", x1: 36, y1: 36, x2: x, y2: y }),
+        h("circle", { className: "d5svgf-dial__center", cx: 36, cy: 36, r: 5 }),
+        h("circle", { className: "d5svgf-dial__dot", cx: x, cy: y, r: 6 }),
+      ),
+      h("span", { className: "d5svgf-dial__value" }, shown + "°"),
+    );
+  }
+
   try {
+    divi.fieldLibrary.registerFieldComponent({
+      name: "d5svgf/dial",
+      component: Dial,
+    });
     divi.fieldLibrary.registerFieldComponent({
       name: "d5svgf/pad",
       component: Pad,
