@@ -1,6 +1,6 @@
 # Tuning controls — design addendum
 
-Date: 2026-10-17 · Status: implemented in plugin 0.3.0 / kit 1.4.0, Posterize channels and Threshold balance in 0.4.0 / kit 1.5.0; Markus can veto any point marked **(veto?)**
+Date: 2026-10-17 · Status: implemented in plugin 0.3.0 / kit 1.4.0, Posterize channels and Threshold balance in 0.4.0 / kit 1.5.0, intuitive controls and the backdrop scope in 0.5.0–0.8.0 / kit 1.6.0–1.8.1; accepted by Markus on 2026-10-18 (points marked **(veto?)** included)
 
 Found while building: Divi's color picker stores `rgba(…)` once the opacity
 is below 100 % (accepted and normalized); on the frontend Divi's block parser
@@ -101,7 +101,7 @@ ignored (the filter shows its default colors); other keys stay valid.
 
 Each filter in the dropdown, checked against what it does: can a user set
 the aspects that matter for that function, with labels that say what higher
-values do, and without having to know SVG? Open for Markus's veto.
+values do, and without having to know SVG? Accepted by Markus on 2026-10-18, together with the Texture fill look change and the dropped Film grain and Posterize tunings.
 
 | Filter | What it does | Controls now | Verdict |
 | --- | --- | --- | --- |
