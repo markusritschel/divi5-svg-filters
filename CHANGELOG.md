@@ -4,6 +4,13 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.8.1]
+
+### Fixed
+
+- Smooth edges in distorting filters (Refractive glass, Water wave, Flowing
+  water, Rough edges, RGB glitch) instead of pixel steps: kit 1.8.2.
+
 ## [0.8.0]
 
 ### Added
