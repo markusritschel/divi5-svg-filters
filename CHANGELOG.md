@@ -4,6 +4,16 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.8.0]
+
+### Added
+
+- *Apply to: Backdrop*: the SVG filter works on what shows through the
+  element (`backdrop-filter`, combined with Divi's Backdrop values), in
+  Chrome, Edge and other Chromium browsers.
+- *Refractive glass* in the dropdown (group *Glass*): always a backdrop,
+  refraction in Chromium browsers, frosted glass elsewhere.
+
 ## [0.7.1]
 
 ### Changed

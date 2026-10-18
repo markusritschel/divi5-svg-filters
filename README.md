@@ -33,11 +33,16 @@ In the Visual Builder, open an element → **Design** → **Filters**. Below
 _Blend_ you find:
 
 - **SVG Filter** — the kit's filters by category (Color, Texture, Blur &
-  distortion, Shape, Light & depth, Fill & compositing, Motion) and your
-  uploads under _Custom_.
-- **Apply to** — _Element_ (the whole element, combined with Divi's filters)
-  or _Background only_ (a filtered copy of the background behind the content;
-  Divi's own filters stay on the element).
+  distortion, Shape, Light & depth, Fill & compositing, Motion, Glass) and
+  your uploads under _Custom_.
+- **Apply to** — _Element_ (the whole element, combined with Divi's filters),
+  _Background only_ (a filtered copy of the background behind the content;
+  Divi's own filters stay on the element) or _Backdrop_ (what shows through
+  the element, combined with Divi's Backdrop values; give the element a
+  semi-transparent background). SVG backdrops render in Chrome, Edge and
+  other Chromium browsers; elsewhere only Divi's Backdrop values apply.
+  _Refractive glass_ is always a backdrop: refraction in Chromium browsers,
+  frosted glass elsewhere (unless you set Divi's Backdrop values).
 - **Tune ‹filter›** — the filter's tunable values as regular Divi fields:
   sliders with units (px, deg, s), Divi's color picker (including your global
   colors, which stay linked; its opacity is the strength for Color tint and

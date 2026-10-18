@@ -100,7 +100,8 @@ the admin backend section of the SVG Filters plugin.
 
 9. **Glass is not in the dropdown in v1.** `fx-liquid` stays usable through the
    kit's `.glass .glass--liquid` classes. A proper backdrop mode for it is a
-   later feature (see *Later*).
+   later feature (see *Later*). *Done in 0.8.0 (Markus, 2026-10-18): "Apply
+   to: Backdrop" for every filter; glass is always a backdrop.*
 10. **Spotlight and melt are in, independent per element.** Each element using
     them reacts to its own pointer and keeps its own tuning; this needs the kit
     JS to attach per instance (kit change, see calls below).

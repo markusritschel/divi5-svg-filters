@@ -55,7 +55,7 @@ page. On `init` (Divi's classes autoload only then) `Plugin::start()` checks
 stays off with a notice.
 
 **Filters on offer.** `Registry` wraps the kit's `svgf_filters()` plus
-upload IDs: dropdown groups (glass excluded, uploads and uncategorised under
+upload IDs: dropdown groups (glass marked `backdrop`, uploads and uncategorised under
 Custom), `Tweaks` controls per hint, and `copy()` for tuned or per-element
 copies (hash-suffixed filter and inner IDs, values validated by `Tweaks`).
 
@@ -68,7 +68,11 @@ functions", so breakpoints, hover and sticky match Divi. Selectors are
 Divi's prefix + the order/preset class doubled + the module.json element
 selector; later layers with Divi values are restated so their Divi values
 still win as in Divi, while the nearest earlier SVG filter carries over
-unless a layer sets its own or `none` (Markus's decision, 0.2.0). Copies go
+unless a layer sets its own or `none` (Markus's decision, 0.2.0). Scope _Backdrop_ (and glass, always) writes `backdrop-filter: url(#id) +
+Divi's backdrop functions` under `.svgf-backdrop-url` (set by the kit's
+script in Chromium; the builder sets it itself), glass also the kit's
+frosted fallback under `html:not(.svgf-backdrop-url)` where Divi has no
+backdrop values. Copies go
 into the kit's defs via `svgf_extra_defs`; rules
 print in `wp_footer` after the defs, copy rules only if the defs included
 them. Unknown filters: no rule, console warning, option `d5svgf_missing`.

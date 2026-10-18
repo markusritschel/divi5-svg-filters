@@ -113,3 +113,10 @@
   restyled by the builder's icon CSS. Inner shadow's opacity moved into the
   color picker; values saved with the former slider still apply next to a
   plain hex color.
+- 2026-10-18, backdrop scope (0.8.0): glass is always a backdrop (no *Apply
+  to*), because `fx-liquid` refracts what is behind a pane; as an element
+  filter it would distort the element itself. Its frosted fallback (the
+  kit's `blur(6px) saturate(1.4)`) applies only where SVG backdrops do not
+  render and Divi has no backdrop values, so Divi's Backdrop Blur never
+  stacks with it. An old kit without metadata cannot mark glass, so
+  `fx-liquid` stays out of `Registry::from_ids()`.

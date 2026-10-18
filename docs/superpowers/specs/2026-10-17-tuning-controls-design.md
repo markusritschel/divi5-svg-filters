@@ -125,7 +125,7 @@ values do, and without having to know SVG? Open for Markus's veto.
 | Flowing water, Hue cycle | Animations | Flow cycle length / Cycle time (s), Distortion strength (px) | Fits; Markus approved the controls (2026-10-18), *Flow cycle length* renamed at his request. |
 | Hover melt | Melts on hover | Melt frequency pad | Fits; the hover strength (45) lives in the kit's script, not tunable (limitation). |
 | Pointer light | Light follows the pointer | Light color, Surface bumpiness, Light height (px) | Fits. |
-| Refractive glass | Glass pane | — | Not offered in the plugin (category `glass`). |
+| Refractive glass | Refracts what shows through a pane | Lens frequency pad, Refraction strength (px); always a backdrop, no *Apply to*; a note explains the semi-transparent background | Offered since 0.8 (Markus asked why it was missing): refraction in Chromium, the kit's frosted look elsewhere. |
 
 Considered and left out: a noise swatch next to single frequency sliders
 (the builder's live preview already shows the effect at the real size).
