@@ -127,7 +127,14 @@
       if (css === null && /^(?:var\(--gcid-[a-z0-9-]+\)|hsl\(from var\(--gcid-[a-z0-9-]+\)[a-z0-9\s(),.%+\-\/]*\))$/i.test(raw)) css = raw;
       if (css !== null) return { value: null, style: c.attr + ":" + css };
       var color = plainColor(raw);
-      return color !== null && color !== c.default ? out(color) : null;
+      return color !== null && color !== (c.default_css || c.default) ? out(color) : null;
+    }
+    if (c.type === "alpha") {
+      var linked = compose(c.color, tune);
+      var own = compose(Object.assign({}, c, { type: "range" }), tune);
+      // Untouched color, or a plain hex next to a value saved with the former opacity slider.
+      if (linked === null || (own !== null && linked.value !== null && linked.value.charAt(0) === "#")) return own;
+      return Math.abs(c.default - 1) < 1e-9 ? null : out("1");
     }
     if (c.type === "range") {
       if (!has(tune, key)) return null;
@@ -148,16 +155,18 @@
       return out(number(x) + " " + number(y));
     }
     if (c.type === "levels") {
-      if (!has(tune, key + "@count") && !has(tune, "@min") && !has(tune, "@max")) {
+      // '@channels' 'each': per-channel fields '<key>@count|@min|@max'; otherwise the shared '@count|@min|@max'.
+      var prefix = tune["@channels"] === "each" ? key : "";
+      if (!has(tune, prefix + "@count") && !has(tune, prefix + "@min") && !has(tune, prefix + "@max")) {
         var saved = has(tune, key) ? list(tune[key]) : null; // saved by 0.1/0.2 as a plain list
         return saved !== null && saved !== list(c.default) ? out(saved) : null;
       }
       var num = function (value, min, max, fallback) {
         return clamp(value !== undefined && value !== "" && isFinite(value) ? Number(value) : fallback, min, max);
       };
-      var count = Math.round(num(tune[key + "@count"], LEVELS_MIN, LEVELS_MAX, c.count));
-      var lo = num(tune["@min"], 0, 1, c.lo);
-      var hi = num(tune["@max"], 0, 1, c.hi);
+      var count = Math.round(num(tune[prefix + "@count"], LEVELS_MIN, LEVELS_MAX, c.count));
+      var lo = num(tune[prefix + "@min"], 0, 1, c.lo);
+      var hi = num(tune[prefix + "@max"], 0, 1, c.hi);
       var levels = [];
       for (var i = 0; i < count; i++) levels.push(number(lo + ((hi - lo) * i) / (count - 1)));
       return out(levels.join(" "));
@@ -191,7 +200,14 @@
       if (!has(preset, c.key)) return;
       var raw = String(preset[c.key]);
       if (c.type === "color") {
-        if (/^#[0-9a-f]{6}$/i.test(raw)) fields[c.key] = raw.toLowerCase();
+        if (!/^#[0-9a-f]{6}$/i.test(raw)) return;
+        var alpha = c.alpha_key ? Number(has(preset, c.alpha_key) ? preset[c.alpha_key] : c.alpha) : 1;
+        fields[c.key] =
+          alpha >= 1 || !isFinite(alpha)
+            ? raw.toLowerCase()
+            : "rgba(" + [1, 3, 5].map(function (i) { return parseInt(raw.substr(i, 2), 16); }).join(", ") + ", " + number(clamp(alpha, 0, 1)) + ")";
+      } else if (c.type === "alpha") {
+        // set through the linked color
       } else if (c.type === "range") {
         var n = parseNumber(raw, c);
         if (n !== null) fields[c.key] = number(clamp(n, c.min, c.max)) + (c.unit || c.suffix || "");
@@ -204,9 +220,10 @@
       } else if (c.type === "levels") {
         var lv = numbers(raw);
         if (lv.length >= LEVELS_MIN) {
+          fields["@channels"] = "each";
           fields[c.key + "@count"] = String(Math.min(LEVELS_MAX, lv.length));
-          fields["@min"] = number(Math.min.apply(null, lv));
-          fields["@max"] = number(Math.max.apply(null, lv));
+          fields[c.key + "@min"] = number(Math.min.apply(null, lv));
+          fields[c.key + "@max"] = number(Math.max.apply(null, lv));
         }
       } else {
         var l = list(raw);
@@ -246,9 +263,10 @@
    *   copy(id, tune, salt): {id} of a tuned/instance copy, or null for the shared filter
    *   interactive: filter ID => kind ('spotlight', 'melt')
    *   functions: Divi filter function keys (hueRotate, saturate, …)
+   *   backdrop(id): glass filter (always a backdrop)?
    * @return {{chunks: Array, missing: string[], interactive: Array|null}}
    *   chunk.kind: 'element' (url + Divi values), 'divi' (Divi values restated),
-   *   'none' (filter:none), 'background'
+   *   'none' (filter:none), 'background', 'backdrop' (with glass: frosted fallback)
    */
   function plan(args) {
     var chunks = [],
@@ -329,6 +347,21 @@
         if (kind && !layer.shared && element === "module")
           interactive = [kind, filterId];
 
+        var glass = !!(args.backdrop && args.backdrop(svg));
+        if (glass || value.svgScope === "backdrop") {
+          // Like background: the element's own filter stays Divi's.
+          chunks.push({
+            kind: "backdrop",
+            selector: selector,
+            filters: filters,
+            filterId: filterId,
+            glass: glass,
+          });
+          if (state.covered) chunks.push(withoutSvg(state, filters, own, selector));
+          state.carry = null;
+          if (own) state.last = filters;
+          return;
+        }
         if (value.svgScope === "background") {
           chunks.push({
             kind: "background",

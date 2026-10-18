@@ -12,14 +12,10 @@ defined( 'ABSPATH' ) || exit;
 
 final class Registry {
 
-	/** Not offered in v1 (glass needs a backdrop mode, see the spec's "Later"). */
-	const EXCLUDED_IDS        = array( 'fx-liquid' );
-	const EXCLUDED_CATEGORIES = array( 'glass' );
-
 	/** Kit category => dropdown group, in dropdown order. Uploads and unknown categories go to 'custom'. */
-	const GROUPS = array( 'color', 'texture', 'distortion', 'shape', 'light', 'fill', 'motion', 'custom' );
+	const GROUPS = array( 'color', 'texture', 'distortion', 'shape', 'light', 'fill', 'motion', 'glass', 'custom' );
 
-	/** @var array<string, array{id:string, label:string, group:string, controls:array, presets:array, markup:string}> */
+	/** @var array<string, array{id:string, label:string, group:string, backdrop:bool, controls:array, presets:array, markup:string}> */
 	private $entries = array();
 
 	/**
@@ -30,9 +26,6 @@ final class Registry {
 		foreach ( $filters as $id => $filter ) {
 			$id       = (string) $id;
 			$category = (string) ( $filter['category'] ?? '' );
-			if ( in_array( $id, self::EXCLUDED_IDS, true ) || in_array( $category, self::EXCLUDED_CATEGORIES, true ) ) {
-				continue;
-			}
 			if ( in_array( $id, $upload_ids, true ) || ! in_array( $category, self::GROUPS, true ) ) {
 				$category = 'custom';
 			}
@@ -42,12 +35,15 @@ final class Registry {
 				$control                      = Tweaks::control( (array) $tweak );
 				$controls[ $control['key'] ] = $control;
 			}
+			$controls = Tweaks::link( $controls );
 
 			$title              = trim( (string) ( $filter['title'] ?? '' ) );
 			$this->entries[ $id ] = array(
 				'id'       => $id,
 				'label'    => '' !== $title ? $title : $id,
 				'group'    => self::group_label( $category ),
+				// Glass refracts what is behind the element: always applied as backdrop-filter.
+				'backdrop' => 'glass' === $category,
 				'controls' => $controls,
 				// Preset values are raw attribute values; they only reach a page through the fields (compose()).
 				'presets'  => is_array( $filter['presets'] ?? null ) ? $filter['presets'] : array(),
@@ -64,11 +60,13 @@ final class Registry {
 		return self::from_ids( function_exists( 'svgf_collect' ) ? (array) ( svgf_collect()['ids'] ?? array() ) : array() );
 	}
 
-	/** IDs only: no titles, no tuning, no copies. */
+	/** IDs only: no titles, no tuning, no copies; without a category the glass filter is left out. */
 	public static function from_ids( array $ids ): self {
 		$filters = array();
 		foreach ( $ids as $id ) {
-			$filters[ (string) $id ] = array();
+			if ( 'fx-liquid' !== (string) $id ) {
+				$filters[ (string) $id ] = array();
+			}
 		}
 		return new self( $filters );
 	}
@@ -189,6 +187,7 @@ final class Registry {
 			'light'      => __( 'Light & depth', 'divi5-svg-filters' ),
 			'fill'       => __( 'Fill & compositing', 'divi5-svg-filters' ),
 			'motion'     => __( 'Motion', 'divi5-svg-filters' ),
+			'glass'      => __( 'Glass', 'divi5-svg-filters' ),
 			'custom'     => __( 'Custom', 'divi5-svg-filters' ),
 		);
 		return $labels[ $category ] ?? $labels['custom'];

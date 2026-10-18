@@ -2,7 +2,8 @@
  * SVG Filters for Divi 5 — Visual Builder (app window).
  *
  * 1. Fields below "Blend" in every Filters group: SVG Filter (grouped select),
- *    Apply to (element / background only), a "Tune ‹filter›" heading with
+ *    Apply to (element / background only / backdrop; glass is always a
+ *    backdrop), a "Tune ‹filter›" heading with
  *    presets and reset, and the filter's tuning values as real Divi fields
  *    (range with unit, color picker with global colors, text, a 3×3 matrix).
  *    They write svgTune[<filter id>][<field key>] (see includes/Tweaks.php).
@@ -66,8 +67,13 @@
   /** Divi fields for one filter's controls; visible only while that filter is chosen. */
   function tuneFields(common, filterId) {
     var filter = D.filters[filterId];
-    var visible = function (e) {
+    var chosen = function (e) {
       return filterOf(e && e.attr) === filterId;
+    };
+    /** Level fields per channel ('@channels' 'each') or shared. */
+    var eachChannel = function (e) {
+      var tune = e.attr.desktop.value.svgTune;
+      return !!(tune && tune[filterId] && tune[filterId]["@channels"] === "each");
     };
     var fields = [];
     var field = function (
@@ -77,16 +83,27 @@
       dflt,
       component,
       features,
+      when,
     ) {
+      var visible = when
+        ? function (e) {
+            return chosen(e) && when(e);
+          }
+        : chosen;
+      // fieldKey null: the field gets the filter's whole svgTune entry (e.g. the 2D pad).
       var tune = {};
       tune[filterId] = {};
-      tune[filterId][fieldKey] = dflt;
+      if (fieldKey !== null) tune[filterId][fieldKey] = dflt;
       fields.push(
         Object.assign({}, common, {
-          subName: "svgTune." + filterId + "." + fieldKey,
+          subName:
+            "svgTune." + filterId + (fieldKey !== null ? "." + fieldKey : ""),
           label: label,
           description: description || undefined,
-          defaultAttr: { desktop: { value: { svgTune: tune } } },
+          defaultAttr:
+            fieldKey !== null
+              ? { desktop: { value: { svgTune: tune } } }
+              : undefined,
           visible: visible,
           features: Object.assign({}, common.features, features || {}),
           component: component,
@@ -120,60 +137,141 @@
             c.key,
             c.label,
             c.description,
-            c.default,
+            c.default_css || c.default,
             { type: "field", name: "divi/color-picker", props: {} },
             { dynamicContent: { type: "color" } },
           );
           break;
+        case "alpha": // the linked color picker's opacity
+          break;
         case "range":
+          var dial = c.unit === "deg" && c.min === 0 && c.max === 360;
+          if (dial) {
+            // A full turn: a dial above the slider, both on the same value.
+            field(c.key, c.label, c.description, withUnit(c.default, c), {
+              type: "field",
+              name: "d5svgf/dial",
+              props: { fallback: c.default },
+            });
+          }
           field(
             c.key,
-            c.label,
-            c.description,
+            dial ? "" : c.label,
+            dial ? "" : c.description,
             withUnit(c.default, c),
             range(c.min, c.max, c.step, c.unit),
           );
           break;
         case "pair":
+          field(null, c.label, c.description, null, {
+            type: "field",
+            name: "d5svgf/pad",
+            props: {
+              tweak: c.key,
+              min: c.min,
+              max: c.max,
+              step: c.step,
+              dx: c.default_x,
+              dy: c.default_y,
+              unit: UNIT_PROPERTY[c.unit] ? c.unit : "",
+              noise: c.key.indexOf("feTurbulence") === 0,
+            },
+          });
           field(
             c.key + "@x",
-            c.label + " (" + I.horiz + ")",
-            c.description,
+            I.horiz,
+            "",
             withUnit(c.default_x, c),
             range(c.min, c.max, c.step, c.unit),
           );
           field(
             c.key + "@y",
-            c.label + " (" + I.vert + ")",
+            I.vert,
             "",
             withUnit(c.default_y, c),
             range(c.min, c.max, c.step, c.unit),
           );
           break;
         case "levels":
+          var together = function (e) {
+            return !eachChannel(e);
+          };
+          if (c === levels[0]) {
+            field(
+              "@channels",
+              I.channels,
+              I.channelsDesc,
+              "all",
+              {
+                type: "field",
+                name: "divi/button-options",
+                props: {
+                  options: {
+                    all: { label: I.together },
+                    each: { label: I.each },
+                  },
+                  showLabel: true,
+                  fullwidth: true,
+                },
+              },
+            );
+            field(
+              "@count",
+              I.levels,
+              I.levelsDesc,
+              String(c.count),
+              range(2, 10, 1, ""),
+              null,
+              together,
+            );
+            field(
+              "@min",
+              I.darkest,
+              I.spreadDesc,
+              number(c.lo),
+              range(0, 1, 0.01, ""),
+              null,
+              together,
+            );
+            field(
+              "@max",
+              I.brightest,
+              I.spreadDesc,
+              number(c.hi),
+              range(0, 1, 0.01, ""),
+              null,
+              together,
+            );
+          }
+          var channel = /^feFunc([RGBA])\b/.exec(c.key);
+          var name = channel ? I.channel[channel[1]] : c.label;
           field(
             c.key + "@count",
             c.label,
             c.description,
             String(c.count),
             range(2, 10, 1, ""),
+            null,
+            eachChannel,
           );
-          if (c === levels[levels.length - 1]) {
-            field(
-              "@min",
-              I.darkest,
-              I.levelsDesc,
-              number(c.lo),
-              range(0, 1, 0.01, ""),
-            );
-            field(
-              "@max",
-              I.brightest,
-              I.levelsDesc,
-              number(c.hi),
-              range(0, 1, 0.01, ""),
-            );
-          }
+          field(
+            c.key + "@min",
+            I.darkestOf.replace("%s", name),
+            I.spreadDesc,
+            number(c.lo),
+            range(0, 1, 0.01, ""),
+            null,
+            eachChannel,
+          );
+          field(
+            c.key + "@max",
+            I.brightestOf.replace("%s", name),
+            I.spreadDesc,
+            number(c.hi),
+            range(0, 1, 0.01, ""),
+            null,
+            eachChannel,
+          );
           break;
         case "matrix":
           field(c.key, c.label, c.description, c.default, {
@@ -220,9 +318,12 @@
         out.svgScope = Object.assign({}, common, {
           subName: "svgScope",
           label: I.applyTo,
+          description: I.scopeDesc,
           defaultAttr: { desktop: { value: { svgScope: "element" } } },
           visible: function (e) {
-            return !!filterOf(e && e.attr);
+            // Glass is always a backdrop.
+            var id = filterOf(e && e.attr);
+            return !!id && !D.filters[id].backdrop;
           },
           component: {
             type: "field",
@@ -231,6 +332,7 @@
               options: {
                 element: { label: I.element },
                 background: { label: I.bg },
+                backdrop: { label: I.backdropScope },
               },
               showLabel: true,
               fullwidth: true,
@@ -277,6 +379,20 @@
     };
     var presets = filter.presets || {};
     var names = Object.keys(presets);
+    var colors = filter.controls.filter(function (c) {
+      return c.type === "color";
+    });
+    var swap = function () {
+      var next = Object.assign({}, mine || {});
+      var current = colors.map(function (c) {
+        return Object.prototype.hasOwnProperty.call(next, c.key)
+          ? next[c.key]
+          : c.default_css || c.default;
+      });
+      next[colors[0].key] = current[1];
+      next[colors[1].key] = current[0];
+      write(next);
+    };
     return h(
       "div",
       { className: "d5svgf-tune-head" },
@@ -288,20 +404,38 @@
           { className: "d5svgf-tune-head__title" },
           I.tune.replace("%s", filter.label),
         ),
-        mine
-          ? h(
-              "button",
-              {
-                type: "button",
-                className: "d5svgf-tune-head__reset",
-                onClick: function () {
-                  write(null);
+        h(
+          "span",
+          { className: "d5svgf-tune-head__actions" },
+          colors.length === 2
+            ? h(
+                "button",
+                {
+                  type: "button",
+                  className: "d5svgf-tune-head__reset d5svgf-tune-head__swap",
+                  onClick: swap,
                 },
-              },
-              I.reset,
-            )
-          : null,
+                I.swap,
+              )
+            : null,
+          mine
+            ? h(
+                "button",
+                {
+                  type: "button",
+                  className: "d5svgf-tune-head__reset",
+                  onClick: function () {
+                    write(null);
+                  },
+                },
+                I.reset,
+              )
+            : null,
+        ),
       ),
+      filter.backdrop
+        ? h("p", { className: "d5svgf-tune-head__note" }, I.glassNote)
+        : null,
       names.length
         ? h(
             "div",
@@ -322,11 +456,52 @@
                     write(core.presetFields(filter, presets[name]));
                   },
                 },
-                name,
+                // As an image: the builder's CSS for icons in buttons would restyle inline SVG.
+                h("img", {
+                  className: "d5svgf-presets__swatch",
+                  alt: "",
+                  width: 56,
+                  height: 36,
+                  src:
+                    "data:image/svg+xml," +
+                    encodeURIComponent(swatch(id, filter, presets[name], names.indexOf(name))),
+                }),
+                h("span", { className: "d5svgf-presets__name" }, name),
               );
             }),
           )
         : null,
+    );
+  }
+
+  /**
+   * Preview of a preset: a gradient tile with "Aa" (tones, edges and relief all show) through
+   * the filter with the preset's values, as SVG markup ('' if the filter does not parse).
+   */
+  function swatch(id, filter, preset, i) {
+    var pid = id + "--preview" + i;
+    var el = filterElement(
+      filter,
+      core.composeAll(filter, core.presetFields(filter, preset)),
+      pid,
+    );
+    if (!el) return "";
+    // Title and description would become the button's text.
+    Array.prototype.slice
+      .call(el.querySelectorAll("title, desc"))
+      .forEach(function (n) {
+        n.parentNode.removeChild(n);
+      });
+    return (
+      '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="36" viewBox="0 0 56 36" aria-hidden="true"><defs>' +
+      '<linearGradient id="' + pid + '-tones" x1="0" x2="1">' +
+      '<stop offset="0" stop-color="#1d2b64"/><stop offset=".55" stop-color="#e4572e"/><stop offset="1" stop-color="#f8e9a1"/>' +
+      "</linearGradient>" +
+      new XMLSerializer().serializeToString(el) +
+      '</defs><g filter="url(#' + pid + ')">' +
+      '<rect x="3" y="3" width="50" height="30" rx="5" fill="url(#' + pid + '-tones)"/>' +
+      '<text x="28" y="24" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="15" fill="#fff">Aa</text>' +
+      "</g></svg>"
     );
   }
 
@@ -371,7 +546,225 @@
     );
   }
 
+  /**
+   * 2D pad for a {pair}: drag the dot (or use the arrow keys, Shift for bigger steps) to set the
+   * horizontal and vertical value together; written on release, so a drag is one undo step.
+   * Turbulence frequencies get a noise swatch at the same pixel scale as on the page.
+   */
+  function Pad(props) {
+    var tune = props.value && typeof props.value === "object" ? props.value : {};
+    var k = props.tweak;
+    var min = props.min;
+    var max = props.max;
+    var step = typeof props.step === "number" ? props.step : (max - min) / 100;
+    var drag = React.useState(null);
+    var noiseId = React.useState(function () {
+      return "d5svgf-noise-" + Math.random().toString(36).slice(2, 10);
+    })[0];
+    var clampTo = function (n) {
+      return Math.min(max, Math.max(min, n));
+    };
+    var read = function (v, fallback) {
+      var n = parseFloat(v);
+      return isFinite(n) ? clampTo(n) : fallback;
+    };
+    var snap = function (n) {
+      return clampTo(Math.round((n - min) / step) * step + min);
+    };
+    var saved = [read(tune[k + "@x"], props.dx), read(tune[k + "@y"], props.dy)];
+    var shown = drag[0] || saved;
+    var commit = function (xy) {
+      var next = Object.assign({}, tune);
+      next[k + "@x"] = number(xy[0]) + props.unit;
+      next[k + "@y"] = number(xy[1]) + props.unit;
+      props.onChange({ inputValue: next });
+    };
+    var at = function (e) {
+      var r = e.currentTarget.getBoundingClientRect();
+      var fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      var fy = Math.min(1, Math.max(0, (r.bottom - e.clientY) / r.height));
+      return [snap(min + (max - min) * fx), snap(min + (max - min) * fy)];
+    };
+    var pct = function (n) {
+      return ((n - min) / (max - min)) * 100 + "%";
+    };
+    var keys = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, 1],
+      ArrowDown: [0, -1],
+    };
+    var input = React.useRef(null);
+    return h(
+      "div",
+      { className: "d5svgf-pad-row" },
+      h(
+        "div",
+        {
+          className: "d5svgf-pad",
+          onPointerDown: function (e) {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            if (input.current) input.current.focus();
+            drag[1](at(e));
+          },
+          onPointerMove: function (e) {
+            if (drag[0]) drag[1](at(e));
+          },
+          onPointerUp: function (e) {
+            if (!drag[0]) return;
+            commit(at(e));
+            drag[1](null);
+          },
+        },
+        // Keyboard focus on an input: Divi's shortcuts take arrow keys from anything else.
+        h("input", {
+          ref: input,
+          type: "text",
+          readOnly: true,
+          className: "d5svgf-sr",
+          value: number(shown[0]) + " " + number(shown[1]),
+          "aria-label": I.horiz + " / " + I.vert,
+          onKeyDown: function (e) {
+            var d = keys[e.key];
+            if (!d) return;
+            e.preventDefault();
+            var f = e.shiftKey ? 10 : 1;
+            commit([
+              snap(saved[0] + d[0] * step * f),
+              snap(saved[1] + d[1] * step * f),
+            ]);
+          },
+        }),
+        h("span", {
+          className: "d5svgf-pad__line d5svgf-pad__line--x",
+          style: { bottom: pct(shown[1]) },
+        }),
+        h("span", {
+          className: "d5svgf-pad__line d5svgf-pad__line--y",
+          style: { left: pct(shown[0]) },
+        }),
+        h("span", {
+          className: "d5svgf-pad__dot",
+          style: { left: pct(shown[0]), bottom: pct(shown[1]) },
+        }),
+        h("span", { className: "d5svgf-pad__axis d5svgf-pad__axis--x" }, I.horiz + " →"),
+        h("span", { className: "d5svgf-pad__axis d5svgf-pad__axis--y" }, I.vert + " →"),
+      ),
+      props.noise
+        ? h(
+            "svg",
+            {
+              className: "d5svgf-pad__noise",
+              width: 72,
+              height: 72,
+              "aria-hidden": true,
+            },
+            h(
+              "filter",
+              { id: noiseId, x: 0, y: 0, width: "100%", height: "100%" },
+              h("feTurbulence", {
+                type: "fractalNoise",
+                baseFrequency: number(shown[0]) + " " + number(shown[1]),
+                numOctaves: 2,
+              }),
+              h("feColorMatrix", { type: "saturate", values: "0" }),
+            ),
+            h("rect", { width: 72, height: 72, filter: "url(#" + noiseId + ")" }),
+          )
+        : null,
+    );
+  }
+
+  /**
+   * Dial for a 0–360° angle (light direction): the dot shows where the light comes from
+   * (SVG azimuth: 0° from the right, clockwise). Drag (Shift: 15° steps) or arrow keys;
+   * written on release.
+   */
+  function Dial(props) {
+    var saved = parseFloat(props.value);
+    if (!isFinite(saved)) saved = props.fallback || 0;
+    var drag = React.useState(null);
+    var shown = drag[0] !== null ? drag[0] : saved;
+    var norm = function (a) {
+      return ((Math.round(a) % 360) + 360) % 360;
+    };
+    var commit = function (a) {
+      props.onChange({ inputValue: norm(a) + "deg" });
+    };
+    var at = function (e) {
+      var r = e.currentTarget.getBoundingClientRect();
+      var a =
+        (Math.atan2(
+          e.clientY - (r.top + r.height / 2),
+          e.clientX - (r.left + r.width / 2),
+        ) *
+          180) /
+        Math.PI;
+      return norm(e.shiftKey ? Math.round(a / 15) * 15 : a);
+    };
+    var rad = (shown * Math.PI) / 180;
+    var x = 36 + 26 * Math.cos(rad);
+    var y = 36 + 26 * Math.sin(rad);
+    var input = React.useRef(null);
+    return h(
+      "div",
+      {
+        className: "d5svgf-dial",
+        onPointerDown: function (e) {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          if (input.current) input.current.focus();
+          drag[1](at(e));
+        },
+        onPointerMove: function (e) {
+          if (drag[0] !== null) drag[1](at(e));
+        },
+        onPointerUp: function (e) {
+          if (drag[0] === null) return;
+          commit(at(e));
+          drag[1](null);
+        },
+      },
+      // Keyboard focus on an input: Divi's shortcuts take arrow keys from anything else.
+      h("input", {
+        ref: input,
+        type: "range",
+        className: "d5svgf-sr",
+        min: 0,
+        max: 359,
+        value: shown,
+        "aria-label": props.label || "",
+        "aria-valuetext": shown + "°",
+        onChange: function (e) {
+          commit(Number(e.target.value));
+        },
+        onKeyDown: function (e) {
+          var d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+          if (!d) return;
+          e.preventDefault();
+          commit(saved + d * (e.shiftKey ? 15 : 1));
+        },
+      }),
+      h(
+        "svg",
+        { width: 72, height: 72, viewBox: "0 0 72 72", "aria-hidden": true },
+        h("circle", { className: "d5svgf-dial__ring", cx: 36, cy: 36, r: 26 }),
+        h("line", { className: "d5svgf-dial__ray", x1: 36, y1: 36, x2: x, y2: y }),
+        h("circle", { className: "d5svgf-dial__center", cx: 36, cy: 36, r: 5 }),
+        h("circle", { className: "d5svgf-dial__dot", cx: x, cy: y, r: 6 }),
+      ),
+      h("span", { className: "d5svgf-dial__value" }, shown + "°"),
+    );
+  }
+
   try {
+    divi.fieldLibrary.registerFieldComponent({
+      name: "d5svgf/dial",
+      component: Dial,
+    });
+    divi.fieldLibrary.registerFieldComponent({
+      name: "d5svgf/pad",
+      component: Pad,
+    });
     divi.fieldLibrary.registerFieldComponent({
       name: "d5svgf/tune-head",
       component: TuneHead,
@@ -385,6 +778,16 @@
   }
 
   /* ---------- 2. Live preview ---------- */
+
+  // Backdrop scope: mark browsers that render SVG backdrops, as the kit's script does on the frontend.
+  var brands =
+    (navigator.userAgentData && navigator.userAgentData.brands) || [];
+  if (
+    brands.some(function (b) {
+      return /Chromium/i.test(b.brand);
+    })
+  )
+    document.documentElement.classList.add("svgf-backdrop-url");
 
   var defs = null;
 
@@ -410,13 +813,24 @@
     var newId = core.copyId(id, values, salt);
     if (document.getElementById(newId)) return { id: newId };
 
+    var el = filterElement(filter, values, newId);
+    if (!el) return null;
+    defsHost().appendChild(document.importNode(el, true));
+    return { id: newId };
+  }
+
+  /**
+   * The filter's <filter> with composed values applied (detached), or null. newId starts with
+   * the filter's ID; the rest is appended to inner IDs too.
+   */
+  function filterElement(filter, values, newId) {
     var doc = new DOMParser().parseFromString(
       '<svg xmlns="http://www.w3.org/2000/svg">' + filter.markup + "</svg>",
       "image/svg+xml",
     );
     var el = doc.querySelector("filter");
     if (!el || doc.querySelector("parsererror")) return null;
-    var suffix = newId.slice(id.length);
+    var suffix = newId.slice((el.getAttribute("id") || "").length);
     var seen = {};
     var prims = {};
     Array.prototype.forEach.call(el.getElementsByTagName("*"), function (p) {
@@ -446,27 +860,55 @@
         p.setAttribute("id", p.getAttribute("id") + suffix);
     });
     el.setAttribute("id", newId);
-    defsHost().appendChild(document.importNode(el, true));
-    return { id: newId };
+    return el;
   }
 
   /** Declaration: url(#id) (if any) in front of Divi's resolved filter functions. */
   function declaration(filterId) {
     return function (p) {
-      var resolved =
-        divi.moduleUtils.getAttrValue({
-          attr: p.attr || {},
-          breakpoint: p.breakpoint || "desktop",
-          state: p.state || "value",
-          mode: "getAndInheritAll",
-          defaultValue: p.attrValue || {},
-        }) || {};
       var parts = filterId ? ["url(#" + filterId + ")"] : [];
-      Object.keys(D.functions).forEach(function (k) {
-        if (resolved[k]) parts.push(D.functions[k] + "(" + resolved[k] + ")");
-      });
+      var divi = functions(p, D.functions);
+      if (divi) parts.push(divi);
       return parts.length ? "filter:" + parts.join(" ") + ";" : "";
     };
+  }
+
+  /**
+   * backdrop-filter declaration (as Frontend::backdrop_rules): url(#id) in front of Divi's backdrop
+   * functions, or for glass's fallback rule the kit's frosted look when Divi has none.
+   */
+  function backdropDeclaration(filterId, fallback) {
+    return function (p) {
+      var divi = functions(p, D.backdrop);
+      var value = fallback
+        ? divi
+          ? ""
+          : D.glass
+        : ("url(#" + filterId + ") " + divi).trim();
+      return value
+        ? "backdrop-filter:" + value + ";-webkit-backdrop-filter:" + value + ";"
+        : "";
+    };
+  }
+
+  /** Divi's resolved values of a Filters attribute as CSS functions from a key => function map. */
+  function functions(p, map) {
+    var resolved =
+      divi.moduleUtils.getAttrValue({
+        attr: p.attr || {},
+        breakpoint: p.breakpoint || "desktop",
+        state: p.state || "value",
+        mode: "getAndInheritAll",
+        defaultValue: p.attrValue || {},
+      }) || {};
+    return Object.keys(map)
+      .filter(function (k) {
+        return !!resolved[k];
+      })
+      .map(function (k) {
+        return map[k] + "(" + resolved[k] + ")";
+      })
+      .join(" ");
   }
 
   /**
@@ -541,6 +983,9 @@
           copy: copy,
           interactive: D.interactive,
           functions: Object.keys(D.functions),
+          backdrop: function (id) {
+            return !!D.filters[id].backdrop;
+          },
         });
         if (plan.missing.length)
           warn("filter not found, not applied: " + plan.missing.join(", "));
@@ -550,6 +995,23 @@
         var rules = plan.chunks.map(function (c, i) {
           if (c.kind === "background")
             return core.backgroundCss(c.selector, c.filterId, c.base, D.edge);
+          if (c.kind === "backdrop") {
+            var backdrop = function (prefix, fallback) {
+              return h(StyleStatements, {
+                key: i + prefix,
+                selectors: { desktop: { value: prefix + c.selector } },
+                attr: c.filters,
+                orderClass: "." + order,
+                declarationFunction: backdropDeclaration(c.filterId, fallback),
+              });
+            };
+            return h(
+              React.Fragment,
+              { key: i },
+              backdrop(".svgf-backdrop-url ", false),
+              c.glass ? backdrop("html:not(.svgf-backdrop-url) ", true) : null,
+            );
+          }
           if (c.kind === "none") return c.selector + "{filter:none}";
           return h(StyleStatements, {
             key: i,

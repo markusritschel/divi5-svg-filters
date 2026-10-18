@@ -40,18 +40,19 @@ final class RegistryTest extends TestCase {
 		return new Registry( $this->filters(), array( 'fx-uploaded' ) );
 	}
 
-	public function test_glass_is_excluded(): void {
+	public function test_glass_is_offered_as_backdrop_only(): void {
 		$r = $this->registry();
 
-		$this->assertFalse( $r->has( 'fx-liquid' ) );
-		$this->assertFalse( $r->has( 'fx-frost' ) );
-		$this->assertTrue( $r->has( 'fx-duotone' ) );
+		$this->assertTrue( $r->has( 'fx-liquid' ) );
+		$this->assertTrue( $r->all()['fx-liquid']['backdrop'] );
+		$this->assertFalse( $r->all()['fx-duotone']['backdrop'] );
 	}
 
 	public function test_groups_follow_the_spec_order_with_custom_last(): void {
 		$groups = $this->registry()->grouped();
 
-		$this->assertSame( array( 'Color', 'Blur & distortion', 'Motion', 'Custom' ), array_keys( $groups ) );
+		$this->assertSame( array( 'Color', 'Blur & distortion', 'Motion', 'Glass', 'Custom' ), array_keys( $groups ) );
+		$this->assertSame( array( 'fx-liquid' => 'Liquid glass', 'fx-frost' => 'Frost' ), $groups['Glass'] );
 		$this->assertSame( array( 'fx-duotone' => 'Duotone' ), $groups['Color'] );
 		$this->assertSame( array( 'fx-themeown' => 'fx-themeown', 'fx-uploaded' => 'My upload' ), $groups['Custom'],
 			'uploads go to Custom whatever their category; no title shows the ID' );
@@ -98,11 +99,10 @@ final class RegistryTest extends TestCase {
 		$this->assertNotSame( $a['id'], $tuned['id'] );
 	}
 
-	public function test_unknown_or_excluded_ids_have_no_copy(): void {
+	public function test_unknown_ids_have_no_copy(): void {
 		$r = $this->registry();
 
 		$this->assertNull( $r->copy( 'fx-nope', array( 'a|b' => '1' ), 'salt' ) );
-		$this->assertNull( $r->copy( 'fx-liquid', array(), 'salt' ) );
 	}
 
 	public function test_controls_per_filter(): void {

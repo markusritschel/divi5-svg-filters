@@ -41,7 +41,7 @@ final class UploadsTest extends TestCase {
 		$taken = Uploads::taken_ids();
 
 		$this->assertContains( 'fx-duotone', $taken );
-		$this->assertContains( 'fx-liquid', $taken, 'also filters the dropdown hides' );
+		$this->assertContains( 'fx-liquid', $taken, 'glass too' );
 		$this->assertContains( 'fx-spot-light', $taken, 'inner primitive IDs' );
 
 		$r = Uploads::import( '<svg xmlns="http://www.w3.org/2000/svg"><filter id="fx-duotone"><feOffset dx="1"/></filter></svg>', 'x.svg' );

@@ -77,6 +77,7 @@ final class Builder {
 		foreach ( $registry->all() as $id => $entry ) {
 			$filters[ $id ] = array(
 				'label'    => $entry['label'],
+				'backdrop' => $entry['backdrop'],
 				'controls' => array_values( $entry['controls'] ),
 				'presets'  => (object) $entry['presets'], // object even when empty, for JS
 				'markup'   => $entry['markup'],
@@ -89,21 +90,43 @@ final class Builder {
 			'interactive' => Frontend::INTERACTIVE,
 			'edge'        => Frontend::EDGE_FILTERS,
 			'functions'   => Frontend::FILTER_FUNCTIONS,
+			'backdrop'    => Frontend::BACKDROP_FUNCTIONS,
+			'glass'       => Frontend::GLASS_FALLBACK,
 			'i18n'        => array(
 				'svgFilter' => __( 'SVG Filter', 'divi5-svg-filters' ),
 				'none'      => __( 'None', 'divi5-svg-filters' ),
 				'applyTo'   => __( 'Apply to', 'divi5-svg-filters' ),
 				'element'   => __( 'Element', 'divi5-svg-filters' ),
 				'bg'        => __( 'Background only', 'divi5-svg-filters' ),
+				'backdropScope' => __( 'Backdrop', 'divi5-svg-filters' ),
+				'scopeDesc' => __( 'Element: the element itself. Background only: a filtered copy of its background behind the content. Backdrop: what shows through the element (give it a semi-transparent background); SVG backdrops render in Chrome, Edge and other Chromium browsers.', 'divi5-svg-filters' ),
+				'glassNote' => __( 'Refracts what shows through the element: give it a semi-transparent background, e.g. with a border and shadow for a pane. Browsers that cannot render SVG backdrops show frosted glass instead (or your Backdrop values).', 'divi5-svg-filters' ),
 				/* translators: %s: filter name */
 				'tune'      => __( 'Tune %s', 'divi5-svg-filters' ),
 				'reset'     => __( 'Reset all', 'divi5-svg-filters' ),
 				'presets'   => __( 'Presets', 'divi5-svg-filters' ),
+				'swap'      => __( 'Swap colors', 'divi5-svg-filters' ),
 				'horiz'     => __( 'horizontal', 'divi5-svg-filters' ),
 				'vert'      => __( 'vertical', 'divi5-svg-filters' ),
+				'channels'  => __( 'Channels', 'divi5-svg-filters' ),
+				'together'  => __( 'All together', 'divi5-svg-filters' ),
+				'each'      => __( 'Each channel', 'divi5-svg-filters' ),
+				'channelsDesc' => __( 'Set the levels once for all color channels, or for red, green and blue separately.', 'divi5-svg-filters' ),
+				'levels'    => __( 'Levels', 'divi5-svg-filters' ),
+				'levelsDesc' => __( 'Number of output levels per channel; more levels give more bands.', 'divi5-svg-filters' ),
 				'darkest'   => __( 'Darkest level', 'divi5-svg-filters' ),
 				'brightest' => __( 'Brightest level', 'divi5-svg-filters' ),
-				'levelsDesc' => __( 'Shared by all channels; the levels are spread evenly between darkest and brightest.', 'divi5-svg-filters' ),
+				'spreadDesc' => __( 'The levels are spread evenly between the darkest and the brightest level (0: none of the channel, 1: full).', 'divi5-svg-filters' ),
+				/* translators: %s: color channel, e.g. Red */
+				'darkestOf' => __( '%s darkest', 'divi5-svg-filters' ),
+				/* translators: %s: color channel, e.g. Red */
+				'brightestOf' => __( '%s brightest', 'divi5-svg-filters' ),
+				'channel'   => array(
+					'R' => __( 'Red', 'divi5-svg-filters' ),
+					'G' => __( 'Green', 'divi5-svg-filters' ),
+					'B' => __( 'Blue', 'divi5-svg-filters' ),
+					'A' => __( 'Alpha', 'divi5-svg-filters' ),
+				),
 				'desc'      => __( 'An SVG filter from the SVG Filter Kit or your uploads. Combined with the filters above in one declaration.', 'divi5-svg-filters' ),
 			),
 		);

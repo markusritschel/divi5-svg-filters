@@ -4,6 +4,80 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.8.0]
+
+### Added
+
+- *Apply to: Backdrop*: the SVG filter works on what shows through the
+  element (`backdrop-filter`, combined with Divi's Backdrop values), in
+  Chrome, Edge and other Chromium browsers.
+- *Refractive glass* in the dropdown (group *Glass*): always a backdrop,
+  refraction in Chromium browsers, frosted glass elsewhere.
+
+## [0.7.1]
+
+### Changed
+
+- Flowing water: *Flow cycle length* (was *Flow cycle*); bundles the SVG
+  Filter Kit 1.8.1.
+
+## [0.7.0]
+
+### Added
+
+- Color tint: strength through the color picker's opacity (kit 1.8.0).
+- Living grain: *Grain strength*, as Film grain.
+- Texture fill: *Vein color* and *Base color* with presets, previews and
+  *Swap colors*.
+
+### Changed
+
+- Texture fill's default look changes from multicolor to violet veins (its
+  colors are choosable now).
+- Bundles the SVG Filter Kit 1.8.0.
+
+## [0.6.0]
+
+### Changed
+
+- Film grain: one *Grain strength* slider instead of two coupled weights
+  (kit 1.7.0); tunings of the former two values no longer apply.
+- Bundles the SVG Filter Kit 1.7.0.
+
+## [0.5.0]
+
+### Added
+
+- Bevel: a dial for the light direction (the dot shows where the light comes
+  from), above the slider.
+- Frequency pairs (Water wave, Texture fill, Refractive glass, RGB glitch,
+  Hover melt): a 2D pad with a noise swatch above the two sliders.
+- Preset buttons show a preview of the preset.
+- Duotone and Threshold: color presets (kit 1.6.0) and *Swap colors*.
+
+### Changed
+
+- Inner shadow: the shadow's opacity is set with the color picker's opacity
+  instead of a separate slider (saved values still apply).
+- Bundles the SVG Filter Kit 1.6.0.
+
+## [0.4.0]
+
+### Added
+
+- Posterize: *Channels* switch — levels, darkest and brightest level for all
+  channels together or for red, green and blue separately.
+- Threshold: *Balance* moves the split between the two inks (kit 1.5.0).
+
+### Changed
+
+- Clearer labels: *Grain fineness*, *Fibre fineness* (kit 1.5.0).
+- Bundles the SVG Filter Kit 1.5.0.
+
+### Note
+
+- Posterize level counts set per channel with 0.3.0 no longer apply.
+
 ## [0.3.0]
 
 ### Changed

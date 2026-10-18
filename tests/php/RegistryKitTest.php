@@ -18,11 +18,11 @@ final class RegistryKitTest extends TestCase {
 		return Registry::from_kit();
 	}
 
-	public function test_every_kit_filter_except_glass_is_listed_with_a_title(): void {
+	public function test_every_kit_filter_is_listed_with_a_title(): void {
 		$r = $this->registry();
 
-		$this->assertSame( 22, count( $r->all() ), '23 kit filters minus fx-liquid' );
-		$this->assertFalse( $r->has( 'fx-liquid' ) );
+		$this->assertSame( 23, count( $r->all() ) );
+		$this->assertTrue( $r->all()['fx-liquid']['backdrop'], 'glass works on the backdrop' );
 		foreach ( $r->all() as $id => $entry ) {
 			$this->assertNotSame( $id, $entry['label'], "{$id} has a title" );
 			$this->assertNotSame( 'Custom', $entry['group'], "{$id} has a known category" );
@@ -46,7 +46,10 @@ final class RegistryKitTest extends TestCase {
 						$tune = array( $key . '@y' => (string) $c['max'] );
 						break;
 					case 'levels':
-						$tune = array( $key . '@count' => '3' );
+						$tune = array( '@channels' => 'each', $key . '@count' => '3' );
+						break;
+					case 'alpha': // set through the linked color's opacity
+						$tune = array( $c['color']['key'] => 'rgba(10, 20, 30, 0.3)' );
 						break;
 					case 'matrix':
 						$tune = array( $key => '0 -1 0 -1 5 -1 0 -1 0' );
@@ -77,6 +80,12 @@ final class RegistryKitTest extends TestCase {
 		$blur = $r->get( 'fx-blur' )['controls']['feGaussianBlur|stdDeviation'];
 		$this->assertSame( array( 'Blur radius', 'Higher is softer', 'px' ), array( $blur['label'], $blur['description'], $blur['unit'] ) );
 		$this->assertArrayHasKey( 'Sharpen', $r->get( 'fx-emboss' )['presets'] );
+
+		// Opacity sliders next to a color become the picker's opacity.
+		$this->assertSame( 'alpha', $r->get( 'fx-inner-shadow' )['controls']['feFlood|flood-opacity']['type'] );
+		$this->assertSame( 'alpha', $r->get( 'fx-tint' )['controls']['feFlood|flood-opacity']['type'] );
+		$this->assertSame( '#e0705b', $r->get( 'fx-tint' )['controls']['feFlood|flood-color']['default_css'], 'full strength: plain hex default' );
+		$this->assertSame( array( 'color', 'color' ), array_values( array_intersect( array_column( $r->get( 'fx-marble' )['controls'], 'type' ), array( 'color' ) ) ) );
 	}
 
 	public function test_old_kit_without_metadata_lists_ids_without_tuning(): void {

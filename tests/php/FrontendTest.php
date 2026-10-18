@@ -39,6 +39,7 @@ final class FrontendTest extends TestCase {
 				'tweaks'   => array( array( 'key' => 'feFuncR|tableValues', 'attr' => 'tableValues', 'default' => '0.1 0.9', 'hint' => 'Red' ) ),
 			),
 			'fx-wave'      => array( 'title' => 'Wave', 'category' => 'distortion', 'markup' => '<filter id="fx-wave"/>' ),
+			'fx-liquid'    => array( 'title' => 'Refractive glass', 'category' => 'glass', 'markup' => '<filter id="fx-liquid"/>' ),
 			'fx-spotlight' => array(
 				'title'    => 'Pointer light',
 				'category' => 'motion',
@@ -153,6 +154,34 @@ final class FrontendTest extends TestCase {
 		$this->assertStringContainsString( "{$s}::before{content:'';position:absolute;inset:-5%;z-index:-1;background:inherit;filter:url(#fx-wave);pointer-events:none}", $out, 'distortion filters get the enlarged copy' );
 		$this->assertStringContainsString( "{$s} .et_parallax_bg,{$s} .et-pb-parallax-background{filter:url(#fx-wave)}", $out );
 		$this->assertStringNotContainsString( 'blur(2px)', $out, "Divi's own filter stays Divi's" );
+	}
+
+	public function test_backdrop_scope_filters_what_is_behind_in_chromium(): void {
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-wave', 'svgScope' => 'backdrop', 'blur' => '2px', 'backdropBlur' => '4px' ) ) );
+		$out = $this->footer()['out'];
+
+		$s = '.et_pb_text_0.et_pb_text_0';
+		$this->assertStringContainsString( ".svgf-backdrop-url {$s}{backdrop-filter:url(#fx-wave) blur(4px);-webkit-backdrop-filter:url(#fx-wave) blur(4px);}", $out, "with Divi's backdrop values" );
+		$this->assertStringNotContainsString( "{$s}{filter:", $out, "the element's own filter stays Divi's" );
+		$this->assertStringNotContainsString( 'html:not(.svgf-backdrop-url)', $out, 'no frosted fallback for other filters' );
+	}
+
+	public function test_glass_is_always_a_backdrop_with_a_frosted_fallback(): void {
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-liquid', 'svgScope' => 'element' ) ) );
+		$out = $this->footer()['out'];
+
+		$s = '.et_pb_text_0.et_pb_text_0';
+		$this->assertStringContainsString( ".svgf-backdrop-url {$s}{backdrop-filter:url(#fx-liquid);-webkit-backdrop-filter:url(#fx-liquid);}", $out );
+		$this->assertStringContainsString( "html:not(.svgf-backdrop-url) {$s}{backdrop-filter:blur(6px) saturate(1.4);-webkit-backdrop-filter:blur(6px) saturate(1.4);}", $out, 'frosted where SVG backdrops do not render' );
+		$this->assertStringNotContainsString( 'filter:url(#fx-liquid)', str_replace( 'backdrop-filter:url(#fx-liquid)', '', $out ), 'never on the element itself' );
+	}
+
+	public function test_glass_fallback_gives_way_to_divis_backdrop_values(): void {
+		$this->render( 'divi/text-0', self::filters( array( 'svgFilter' => 'fx-liquid', 'backdropBlur' => '3px' ) ) );
+		$out = $this->footer()['out'];
+
+		$this->assertStringContainsString( 'backdrop-filter:url(#fx-liquid) blur(3px);', $out );
+		$this->assertStringNotContainsString( 'html:not(.svgf-backdrop-url)', $out, "Divi's own backdrop rule applies there" );
 	}
 
 	public function test_sub_element_uses_the_block_selector(): void {

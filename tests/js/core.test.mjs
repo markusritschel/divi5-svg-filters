@@ -43,10 +43,14 @@ test('compose mirrors Tweaks::compose (same cases as TweaksTest)', () => {
     [pair, { 'feTurbulence|baseFrequency@y': '0.09' }, v('0.008 0.09')],
     [pair, { 'feTurbulence|baseFrequency@x': '5' }, v('0.1 0.03')],
     [pair, { 'feTurbulence|baseFrequency': '0.02 0.04' }, v('0.02 0.04')],
-    [levels, { 'feFuncR|tableValues@count': '3' }, v('0 0.5 1')],
-    [levels, { 'feFuncR|tableValues@count': '3', '@min': '0.2', '@max': '0.8' }, v('0.2 0.5 0.8')],
+    [levels, { '@count': '3' }, v('0 0.5 1')],
+    [levels, { '@count': '3', '@min': '0.2', '@max': '0.8' }, v('0.2 0.5 0.8')],
     [levels, { '@max': '0.6' }, v('0 0.2 0.4 0.6')],
-    [levels, { 'feFuncR|tableValues@count': '99' }, v('0 0.111111 0.222222 0.333333 0.444444 0.555556 0.666667 0.777778 0.888889 1')],
+    [levels, { '@count': '99' }, v('0 0.111111 0.222222 0.333333 0.444444 0.555556 0.666667 0.777778 0.888889 1')],
+    [levels, { '@channels': 'each', 'feFuncR|tableValues@count': '3', 'feFuncR|tableValues@min': '0.2', 'feFuncR|tableValues@max': '0.8' }, v('0.2 0.5 0.8')],
+    [levels, { '@channels': 'each', '@count': '3', 'feFuncR|tableValues@max': '0.6' }, v('0 0.2 0.4 0.6')],
+    [levels, { '@channels': 'each', '@count': '3' }, null],
+    [levels, { 'feFuncR|tableValues@count': '3' }, null],
     [levels, {}, null],
     [levels, { 'feFuncR|tableValues': '0 1' }, v('0 1')],
     [matrix, { 'feConvolveMatrix|kernelMatrix': '0 -1 0 -1 5 -1 0 -1 0' }, v('0 -1 0 -1 5 -1 0 -1 0')],
@@ -59,6 +63,33 @@ test('compose mirrors Tweaks::compose (same cases as TweaksTest)', () => {
   for (const [control, tune, expected] of cases) {
     assert.deepEqual(core.compose(control, tune), expected, `${control.type} ${JSON.stringify(tune)}`);
   }
+});
+
+// Linked as Tweaks::link() delivers them (Inner shadow).
+const shadowColor = { ...color, alpha_key: 'feFlood|flood-opacity', alpha: 0.65, default_css: 'rgba(0, 0, 0, 0.65)' };
+const shadowAlpha = { key: 'feFlood|flood-opacity', attr: 'flood-opacity', type: 'alpha', default: 0.65, min: 0, max: 1, step: 0.01, unit: '', suffix: '', color: shadowColor };
+
+test('compose: color with linked opacity (same cases as TweaksTest)', () => {
+  const cases = [
+    [{}, null, null],
+    [{ 'feFlood|flood-color': 'rgba(0, 0, 0, 0.65)' }, null, null],
+    [{ 'feFlood|flood-color': 'rgba(255, 0, 0, 0.3)' }, v('rgba(255, 0, 0, 0.3)'), v('1')],
+    [{ 'feFlood|flood-color': '#000000' }, v('#000000'), v('1')],
+    [{ 'feFlood|flood-color': gc }, { value: null, style: 'flood-color:var(--gcid-primary-color)' }, v('1')],
+    [{ 'feFlood|flood-opacity': '0.3' }, null, v('0.3')],
+    [{ 'feFlood|flood-color': '#ff0000', 'feFlood|flood-opacity': '0.3' }, v('#ff0000'), v('0.3')],
+  ];
+  for (const [tune, c, a] of cases) {
+    assert.deepEqual(core.compose(shadowColor, tune), c, `color ${JSON.stringify(tune)}`);
+    assert.deepEqual(core.compose(shadowAlpha, tune), a, `opacity ${JSON.stringify(tune)}`);
+  }
+});
+
+test('presetFields puts a linked opacity into the color', () => {
+  const filter = { controls: [shadowColor, shadowAlpha] };
+  assert.deepEqual(core.presetFields(filter, { 'feFlood|flood-color': '#FFFFFF', 'feFlood|flood-opacity': '.8' }), { 'feFlood|flood-color': 'rgba(255, 255, 255, 0.8)' });
+  assert.deepEqual(core.presetFields(filter, { 'feFlood|flood-color': '#ff0000' }), { 'feFlood|flood-color': 'rgba(255, 0, 0, 0.65)' });
+  assert.deepEqual(core.presetFields(filter, { 'feFlood|flood-color': '#ff0000', 'feFlood|flood-opacity': '1' }), { 'feFlood|flood-color': '#ff0000' });
 });
 
 test('composeAll keeps changed controls only, sorted by key', () => {
@@ -82,9 +113,10 @@ test('presetFields turns preset attribute values into field values', () => {
     'feFlood|flood-color': '#ffffff',
     'feTurbulence|baseFrequency@x': '0.02',
     'feTurbulence|baseFrequency@y': '0.05',
+    '@channels': 'each',
     'feFuncR|tableValues@count': '3',
-    '@min': '0.2',
-    '@max': '0.8',
+    'feFuncR|tableValues@min': '0.2',
+    'feFuncR|tableValues@max': '0.8',
     'feConvolveMatrix|kernelMatrix': '0 -1 0 -1 5 -1 0 -1 0',
     'animate|dur': '1.5s',
   });
@@ -100,9 +132,9 @@ test('copyId is stable and depends on values and salt', () => {
 
 const templates = { module: '{{selector}}', content: '{{selector}} .et_pb_text_inner' };
 const filters = (value, more = {}) => ({ module: { decoration: { filters: { desktop: { value, ...more } } } } });
-const has = (id) => ['fx-wave', 'fx-duotone', 'fx-spotlight'].includes(id);
+const has = (id) => ['fx-wave', 'fx-duotone', 'fx-spotlight', 'fx-liquid'].includes(id);
 const copy = (id, tune, salt) => (salt || (tune && Object.keys(tune).length) ? { id: `${id}--copy${salt ? '-' + salt : ''}` } : null);
-const plan = (layers) => core.plan({ layers, templates, has, copy, interactive: { 'fx-spotlight': 'spotlight' }, functions: ['hueRotate', 'saturate', 'brightness', 'contrast', 'invert', 'sepia', 'opacity', 'blur'] });
+const plan = (layers) => core.plan({ layers, templates, has, copy, backdrop: (id) => id === 'fx-liquid', interactive: { 'fx-spotlight': 'spotlight' }, functions: ['hueRotate', 'saturate', 'brightness', 'contrast', 'invert', 'sepia', 'opacity', 'blur'] });
 
 test('plan: element rule with raised selector, sub-elements, none and missing', () => {
   const p = plan([{ cls: 'm1', attrs: {
@@ -137,6 +169,20 @@ test('plan: background scope, interactive, later layers restated', () => {
 
   const plain = plan([{ cls: 'p1', shared: true, attrs: filters({ sepia: '40%' }) }, { cls: 'm1', attrs: filters({ blur: '3px' }) }]);
   assert.equal(plain.chunks.length, 0, 'nothing of ours, nothing restated');
+});
+
+test('plan: backdrop scope; glass is always a backdrop', () => {
+  const wave = plan([{ cls: 'm1', attrs: filters({ svgFilter: 'fx-wave', svgScope: 'backdrop', blur: '1px' }) }]);
+  assert.deepEqual(wave.chunks.map((c) => [c.kind, c.selector, c.filterId, c.glass]), [['backdrop', '.m1.m1', 'fx-wave', false]]);
+
+  const glass = plan([{ cls: 'm1', attrs: filters({ svgFilter: 'fx-liquid', svgScope: 'element' }) }]);
+  assert.deepEqual(glass.chunks.map((c) => [c.kind, c.glass]), [['backdrop', true]]);
+
+  const later = plan([
+    { cls: 'p1', shared: true, attrs: filters({ svgFilter: 'fx-wave' }) },
+    { cls: 'm1', attrs: filters({ svgFilter: 'fx-liquid' }) },
+  ]);
+  assert.deepEqual(later.chunks.map((c) => c.kind), ['element', 'backdrop', 'none'], "the preset's element filter is switched off, as for background scope");
 });
 
 test('plan: a layer can raise its selector further (builder: module above shared preset rules)', () => {

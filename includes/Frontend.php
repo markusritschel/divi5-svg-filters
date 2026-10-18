@@ -39,6 +39,16 @@ final class Frontend {
 		'blur'       => 'blur',
 	);
 
+	/** Divi's backdrop-filter functions (Divi 5.15.1, Filters::style_declaration). */
+	const BACKDROP_FUNCTIONS = array(
+		'backdropBlur'   => 'blur',
+		'backdropInvert' => 'invert',
+		'backdropSepia'  => 'sepia',
+	);
+
+	/** The kit's frosted look for glass where SVG backdrops do not render (.glass--liquid). */
+	const GLASS_FALLBACK = 'blur(6px) saturate(1.4)';
+
 	/** Filters whose kit JS reacts to the pointer: one copy per element (spec goal 10). */
 	const INTERACTIVE = array( 'fx-spotlight' => 'spotlight', 'fx-melt' => 'melt' );
 
@@ -250,7 +260,18 @@ final class Frontend {
 			$kind = array( $interactive, $filter_id );
 		}
 
-		if ( 'background' === ( $value['svgScope'] ?? 'element' ) ) {
+		$scope = $this->registry()->get( $svg )['backdrop'] ? 'backdrop' : ( $value['svgScope'] ?? 'element' );
+		if ( 'backdrop' === $scope ) {
+			// Like background: the element's own filter stays Divi's.
+			$css            = self::backdrop_rules( $filters, $selector, $filter_id, $this->registry()->get( $svg )['backdrop'] );
+			$css           .= $state['covered'] ? $this->without_svg( $state, $own_divi ? $divi_only : '', $selector ) : '';
+			$state['carry'] = null;
+			$state['last']  = $own_divi ? $filters : $state['last'];
+			$this->add( $group, (bool) $copy, $css );
+			return;
+		}
+
+		if ( 'background' === $scope ) {
 			// The element's own filter stays Divi's; an inherited raised rule must not keep its SVG filter.
 			$css            = self::background_rules( $selector, $filter_id, $svg );
 			$css           .= $state['covered'] ? $this->without_svg( $state, $own_divi ? $divi_only : '', $selector ) : '';
@@ -306,6 +327,55 @@ final class Frontend {
 					$divi     = Filters::value( is_array( $resolved ) ? $resolved : array(), self::FILTER_FUNCTIONS );
 					$value    = trim( ( '' !== $filter_id ? 'url(#' . $filter_id . ') ' : '' ) . $divi );
 					return '' !== $value ? 'filter:' . $value . ';' : '';
+				},
+			)
+		);
+	}
+
+	/**
+	 * Backdrop scope: the SVG filter in front of Divi's backdrop functions, where SVG references in
+	 * backdrop-filter render (the kit's script marks those browsers with html.svgf-backdrop-url).
+	 * Glass also gets the kit's frosted look elsewhere, unless Divi has backdrop values of its own.
+	 */
+	private static function backdrop_rules( array $filters, string $selector, string $filter_id, bool $glass ): string {
+		$css = self::backdrop_statements(
+			$filters,
+			'.svgf-backdrop-url ' . $selector,
+			static function ( string $divi ) use ( $filter_id ): string {
+				return trim( 'url(#' . $filter_id . ') ' . $divi );
+			}
+		);
+		if ( $glass ) {
+			$css .= self::backdrop_statements(
+				$filters,
+				'html:not(.svgf-backdrop-url) ' . $selector,
+				static function ( string $divi ): string {
+					return '' === $divi ? self::GLASS_FALLBACK : '';
+				}
+			);
+		}
+		return $css;
+	}
+
+	/** backdrop-filter rules from Divi's backdrop values, through $value (empty: no declaration). */
+	private static function backdrop_statements( array $filters, string $selector, callable $value ): string {
+		return (string) Utils::style_statements(
+			array(
+				'selectors'           => array( 'desktop' => array( 'value' => $selector ) ),
+				'attr'                => $filters,
+				'returnType'          => 'string',
+				'declarationFunction' => static function ( $params ) use ( $value ) {
+					$resolved = ModuleUtils::use_attr_value(
+						array(
+							'attr'         => $params['attr'] ?? array(),
+							'breakpoint'   => $params['breakpoint'] ?? 'desktop',
+							'state'        => $params['state'] ?? 'value',
+							'mode'         => 'getAndInheritAll',
+							'defaultValue' => $params['attrValue'] ?? array(),
+						)
+					);
+					$css      = $value( Filters::value( is_array( $resolved ) ? $resolved : array(), self::BACKDROP_FUNCTIONS ) );
+					return '' !== $css ? 'backdrop-filter:' . $css . ';-webkit-backdrop-filter:' . $css . ';' : '';
 				},
 			)
 		);

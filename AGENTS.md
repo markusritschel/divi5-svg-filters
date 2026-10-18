@@ -3,7 +3,7 @@
 WordPress plugin that brings the SVG Filter Kit
 ([wp-svg-filters](https://github.com/markusritschel/wp-svg-filters)) into
 the Divi 5 Visual Builder: an "SVG filter" section inside Divi's Filters
-option group (dropdown, Element/Background scope, tuning fold-out), one
+option group (dropdown, Element/Background scope, tuning fields), one
 combined `filter:` declaration with Divi's own filter values, and an admin
 page for uploading custom SVG filters. Divi 5 only. Guiding rule: never
 break a page; if anything is missing, the SVG filter silently does not apply.
@@ -55,7 +55,7 @@ page. On `init` (Divi's classes autoload only then) `Plugin::start()` checks
 stays off with a notice.
 
 **Filters on offer.** `Registry` wraps the kit's `svgf_filters()` plus
-upload IDs: dropdown groups (glass excluded, uploads and uncategorised under
+upload IDs: dropdown groups (glass marked `backdrop`, uploads and uncategorised under
 Custom), `Tweaks` controls per hint, and `copy()` for tuned or per-element
 copies (hash-suffixed filter and inner IDs, values validated by `Tweaks`).
 
@@ -68,7 +68,11 @@ functions", so breakpoints, hover and sticky match Divi. Selectors are
 Divi's prefix + the order/preset class doubled + the module.json element
 selector; later layers with Divi values are restated so their Divi values
 still win as in Divi, while the nearest earlier SVG filter carries over
-unless a layer sets its own or `none` (Markus's decision, 0.2.0). Copies go
+unless a layer sets its own or `none` (Markus's decision, 0.2.0). Scope _Backdrop_ (and glass, always) writes `backdrop-filter: url(#id) +
+Divi's backdrop functions` under `.svgf-backdrop-url` (set by the kit's
+script in Chromium; the builder sets it itself), glass also the kit's
+frosted fallback under `html:not(.svgf-backdrop-url)` where Divi has no
+backdrop values. Copies go
 into the kit's defs via `svgf_extra_defs`; rules
 print in `wp_footer` after the defs, copy rules only if the defs included
 them. Unknown filters: no rule, console warning, option `d5svgf_missing`.
@@ -77,8 +81,10 @@ them. Unknown filters: no rule, console warning, option `d5svgf_missing`.
 `Tweaks`/`Frontend`, with `window.D5SVGF` data inline) and
 `assets/builder.js` for Divi's app iframe, `assets/builder.css` for the
 top-window panel. `builder.js` adds the fields through
-`divi.module.options.filters.group.fields`, registers the `d5svgf/tune`
-field component (writes `svgTune` per filter) and renders a `<style>` next to
+`divi.module.options.filters.group.fields`, registers its own field
+components (`d5svgf/tune-head` with presets and swap, `d5svgf/matrix`,
+`d5svgf/pad`, `d5svgf/dial`; pad and dial keep keyboard focus in a hidden
+input because Divi's shortcuts take arrow keys from anything else) and renders a `<style>` next to
 each module through `divi.module.wrapper.render`, using Divi's
 `StyleStatements`, the module's own attrs from the edit-post store and
 selector templates from the module-library store.
@@ -109,6 +115,7 @@ union types, `match`), namespace `D5SVGF`, one class per file in
 - [low] Pointer filters set through a preset share one light per preset.
 - [low] Module elements whose Filters use a selector that is not a plain
   `{{selector}} …` string in module.json are skipped.
+- [low] Hover melt's hover strength is fixed in the kit's script.
 - [low] Text tuning values must be number lists; the import message does not
   list what the sanitizer removed; admin notices are not dismissible.
 - [low] Deliberate: no uninstall cleanup, so uploads survive a reinstall.

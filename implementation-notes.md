@@ -100,3 +100,23 @@
   three dual sliders Markus suggested. Global colors are now allowed
   (revises the base spec's "plain hex only"). Angle wheel and 2D pad are
   left for later.
+- 2026-10-17, Posterize channels (0.4.0): a "Channels" switch instead of
+  always showing nine fields; each mode reads only its own fields, so the
+  displayed values always match the output. Per-channel counts saved with
+  0.3.0 (released the same day) are not migrated.
+- 2026-10-17, intuitive controls (0.5.0): the dial and the 2D pad sit above
+  Divi's sliders instead of replacing them (keeps Divi's numeric input). They
+  keep keyboard focus in a visually hidden input: Divi's keyboard-shortcuts
+  handler takes arrow keys from every element except inputs, textareas and
+  contenteditable (ArrowUp/Down switched the selected module). Preset
+  swatches are SVG data images, because inline SVG in a Divi button is
+  restyled by the builder's icon CSS. Inner shadow's opacity moved into the
+  color picker; values saved with the former slider still apply next to a
+  plain hex color.
+- 2026-10-18, backdrop scope (0.8.0): glass is always a backdrop (no *Apply
+  to*), because `fx-liquid` refracts what is behind a pane; as an element
+  filter it would distort the element itself. Its frosted fallback (the
+  kit's `blur(6px) saturate(1.4)`) applies only where SVG backdrops do not
+  render and Divi has no backdrop values, so Divi's Backdrop Blur never
+  stacks with it. An old kit without metadata cannot mark glass, so
+  `fx-liquid` stays out of `Registry::from_ids()`.

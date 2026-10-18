@@ -167,6 +167,51 @@ test('builder: fields, live preview, tuning, scope, save', async () => {
   }
 });
 
+test('backdrop: scope and glass (builder and frontend, fallback without SVG backdrops)', async () => {
+  const vb = await builder('e2e-filters');
+  try {
+    const { page, app, appStyle } = vb;
+    const backdrop = (i) => app.evaluate(([sel, i]) => getComputedStyle(document.querySelectorAll(sel)[i]).backdropFilter, [MOD, i]);
+    await app.locator(MOD).nth(0).click();
+    await page.waitForTimeout(1500);
+    await page.getByRole('tab', { name: 'Design' }).or(page.locator('text=Design')).first().click();
+    await page.waitForTimeout(800);
+    await page.locator('text=Filters').first().click();
+    await page.waitForTimeout(1000);
+    const select = page.locator('#et-vb-module-decoration-filters--svgFilter');
+    await select.scrollIntoViewIfNeeded();
+
+    await select.click();
+    await select.locator('li[data-value="fx-wave"]').click();
+    await page.waitForTimeout(800);
+    await page.locator('.et-vb-field-module-decoration-filters-svg-scope button[data-name="backdrop"]').click();
+    await page.waitForTimeout(800);
+    assert.equal(await backdrop(0), 'url("#fx-wave")', 'backdrop scope');
+    assert.equal(await appStyle(0), 'saturate(1.5) blur(1px)', "the element keeps Divi's own filter");
+
+    await select.click();
+    await select.locator('li[data-value="fx-liquid"]').click();
+    await page.waitForTimeout(800);
+    assert.equal(await backdrop(0), 'url("#fx-liquid")', 'glass is a backdrop');
+    assert.equal(await page.locator('.et-vb-field-module-decoration-filters-svg-scope').count(), 0, 'no Apply to for glass');
+    assert.ok(await page.locator('.d5svgf-tune-head__note').isVisible(), 'glass note');
+
+    await page.locator('button:has-text("Save")').first().click();
+    await page.waitForTimeout(6000);
+    assert.deepEqual(vb.errors, []);
+
+    const fe = await frontend('e2e-filters');
+    const bd = () => fe.page.locator('.et_pb_text_0').evaluate((e) => getComputedStyle(e).backdropFilter);
+    assert.equal(await bd(), 'url("#fx-liquid")', 'refraction where SVG backdrops render');
+    await fe.page.evaluate(() => document.documentElement.classList.remove('svgf-backdrop-url'));
+    assert.equal(await bd(), 'blur(6px) saturate(1.4)', 'frosted fallback elsewhere');
+    await fe.page.close();
+  } finally {
+    await vb.page.close();
+    resetPage('e2e-filters');
+  }
+});
+
 test('builder: presets, levels, global colors (builder and frontend)', async () => {
   const vb = await builder('e2e-filters');
   try {
@@ -202,18 +247,86 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     await page.locator('.d5svgf-presets button', { hasText: 'Glow' }).click();
     await page.waitForTimeout(800);
     const glow = await copyOf();
-    assert.equal(await attrIn(glow, 'feFlood', 'flood-color'), '#ffffff', 'preset Glow color');
+    assert.equal(await attrIn(glow, 'feFlood', 'flood-color'), 'rgba(255, 255, 255, 0.8)', 'preset Glow color with its opacity');
+    assert.equal(await attrIn(glow, 'feFlood', 'flood-opacity'), '1', 'opacity carried by the color');
+    assert.equal(await page.locator('.et-vb-field', { hasText: /Shadow opacity/i }).count(), 0, 'no separate opacity slider');
     assert.equal(await attrIn(glow, 'feGaussianBlur', 'stdDeviation'), '8', 'preset Glow softness');
 
+    // Posterize fields: 0 Channels, 1–3 shared count/darkest/brightest, 4–6 red, 7–9 green, 10–12 blue.
     await choose('fx-posterize');
-    const red = page.locator('.et-vb-field[class*="d5svgfTune_fx-posterize_0"] .et-vb-numeric-input-text input').first();
-    await red.scrollIntoViewIfNeeded();
-    await red.fill('2');
-    await red.press('Enter');
+    const posterField = (i) => page.locator(`.et-vb-field:is([class*="d5svgfTune_fx-posterize_${i} "], [class$="d5svgfTune_fx-posterize_${i}"])`).first();
+    const setLevel = async (i, value) => {
+      const input = posterField(i).locator('.et-vb-numeric-input-text input').first();
+      await input.scrollIntoViewIfNeeded();
+      await input.fill(value);
+      await input.press('Enter');
+      await page.waitForTimeout(800);
+    };
+    await setLevel(1, '2');
+    let poster = await copyOf();
+    assert.equal(await attrIn(poster, 'feFuncR', 'tableValues'), '0 1', 'all channels: red');
+    assert.equal(await attrIn(poster, 'feFuncB', 'tableValues'), '0 1', 'all channels: blue');
+    assert.equal(await posterField(4).isVisible(), false, 'per-channel fields hidden');
+    await posterField(0).locator('button[data-name="each"]').click();
     await page.waitForTimeout(800);
-    assert.equal(await attrIn(await copyOf(), 'feFuncR', 'tableValues'), '0 1', 'red levels');
+    assert.equal(await posterField(1).isVisible(), false, 'shared fields hidden');
+    await setLevel(6, '0.5');
+    poster = await copyOf();
+    assert.equal(await attrIn(poster, 'feFuncR', 'tableValues'), '0 0.166667 0.333333 0.5', 'each channel: red brightest');
+    assert.equal(await attrIn(poster, 'feFuncG', 'tableValues'), '0 .35 .7 1', 'each channel: green untouched');
+
+    await choose('fx-wave');
+    const pad = page.locator('.d5svgf-pad');
+    await pad.scrollIntoViewIfNeeded();
+    const box = await pad.boundingBox();
+    await pad.click({ position: { x: box.width / 2, y: box.height / 4 } });
+    await page.waitForTimeout(800);
+    // Clicks land on whole pixels: allow a step either way.
+    const [px, py] = (await attrIn(await copyOf(), 'feTurbulence', 'baseFrequency')).split(' ').map(Number);
+    assert.ok(Math.abs(px - 0.05) <= 0.002 && Math.abs(py - 0.075) <= 0.002, `pad sets both frequencies (${px} ${py})`);
+    await pad.locator('input').press('ArrowRight');
+    await page.waitForTimeout(800);
+    await pad.locator('input').press('ArrowUp');
+    await page.waitForTimeout(800);
+    const stepped = `${Math.round((px + 0.001) * 1000) / 1000} ${Math.round((py + 0.001) * 1000) / 1000}`;
+    assert.equal(await attrIn(await copyOf(), 'feTurbulence', 'baseFrequency'), stepped, 'arrow key steps');
+    const horiz = page.locator('.et-vb-field:is([class*="d5svgfTune_fx-wave_1 "], [class$="d5svgfTune_fx-wave_1"]) .et-vb-numeric-input-text input').first();
+    assert.equal(await horiz.inputValue(), stepped.split(' ')[0], 'slider follows the pad');
+    assert.equal(await page.locator('.d5svgf-pad__noise feTurbulence').getAttribute('baseFrequency'), stepped, 'noise swatch follows');
+
+    await choose('fx-bevel');
+    const dial = page.locator('.d5svgf-dial svg');
+    await dial.scrollIntoViewIfNeeded();
+    await dial.click({ position: { x: 8, y: 36 } }); // left of the center: light from the left
+    await page.waitForTimeout(800);
+    assert.equal(await attrIn(await copyOf(), 'feDistantLight', 'azimuth'), '180', 'dial sets the light direction');
+    // Divi's shortcuts take arrow keys from everything but inputs; the dial keeps focus in one.
+    await page.locator('.d5svgf-dial input').press('ArrowDown');
+    await page.waitForTimeout(800);
+    assert.equal(await attrIn(await copyOf(), 'feDistantLight', 'azimuth'), '179', 'dial arrow key');
+    const angle = page.locator('.et-vb-field:is([class*="d5svgfTune_fx-bevel_4 "], [class$="d5svgfTune_fx-bevel_4"]) .et-vb-numeric-input-text input').first();
+    assert.equal(await angle.inputValue(), '179', 'slider follows the dial');
+
+    await choose('fx-tint');
+    assert.equal(await page.locator('.et-vb-field', { hasText: /Tint strength/i }).count(), 0, 'tint strength is the picker opacity');
+    await choose('fx-marble');
+    await page.locator('.d5svgf-presets button', { hasText: 'Malachite' }).click();
+    await page.waitForTimeout(800);
+    const marble = await copyOf();
+    assert.deepEqual([await attrIn(marble, 'feFlood', 'flood-color'), await attrIn(marble, 'feFlood:nth-of-type(2)', 'flood-color')], ['#0b3d2e', '#6fdcae'], 'Texture fill preset colors');
 
     await choose('fx-duotone');
+    const sepia = page.locator('.d5svgf-presets button', { hasText: 'Sepia' });
+    const swatchSvg = decodeURIComponent((await sepia.locator('img.d5svgf-presets__swatch').getAttribute('src')).replace('data:image/svg+xml,', ''));
+    assert.match(swatchSvg, /flood-color="#2e1d0f"/, 'preset swatch rendered with the preset');
+    await page.locator('.d5svgf-presets button', { hasText: 'Sepia' }).click();
+    await page.waitForTimeout(800);
+    let duo = await copyOf();
+    assert.deepEqual([await attrIn(duo, 'feFlood', 'flood-color'), await attrIn(duo, 'feFlood:nth-of-type(2)', 'flood-color')], ['#2e1d0f', '#f2dfc0'], 'preset Sepia');
+    await page.locator('.d5svgf-tune-head__swap').click();
+    await page.waitForTimeout(800);
+    duo = await copyOf();
+    assert.deepEqual([await attrIn(duo, 'feFlood', 'flood-color'), await attrIn(duo, 'feFlood:nth-of-type(2)', 'flood-color')], ['#f2dfc0', '#2e1d0f'], 'swapped');
     const shadowField = page.locator('.et-vb-field[class*="d5svgfTune_fx-duotone_0"]').first();
     await shadowField.scrollIntoViewIfNeeded();
     await shadowField.hover();

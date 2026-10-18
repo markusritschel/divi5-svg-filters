@@ -5,12 +5,13 @@
  * Hints (kit hint syntax 2): "[min, max unit] {type} Label | Description";
  * range, unit (px, deg, s, %), type (pair, levels, matrix) and description
  * are optional. A hex default gives a color, one number a range, a {pair}
- * two ranges, {levels} a level count (+ a shared darkest/brightest range),
+ * two ranges, {levels} a level count with darkest/brightest level,
  * {matrix} a 3×3 grid, anything else a number list.
  *
  * Each control maps to one or more Divi fields inside svgTune[<filter id>]:
  * '<key>' (range, color, matrix, text), '<key>@x' / '<key>@y' (pair),
- * '<key>@count' plus the filter-wide '@min' / '@max' (levels). compose()
+ * the filter-wide '@count' / '@min' / '@max', or with '@channels' 'each'
+ * '<key>@count' / '<key>@min' / '<key>@max' (levels). compose()
  * turns those field values into the attribute value, or for global colors
  * into a CSS declaration for the primitive's style.
  *
@@ -97,6 +98,34 @@ final class Tweaks {
 		return $control + array( 'type' => 'text', 'default' => $default );
 	}
 
+	/**
+	 * A color and a [0, 1] '<name>-opacity' range on the same primitive become one color field whose
+	 * opacity replaces the slider: the color gets alpha_key, alpha (default opacity) and default_css
+	 * (the default with that opacity), the range becomes type 'alpha' (1 once a color is chosen; see compose()).
+	 *
+	 * @param array $controls key => control() of one filter.
+	 * @return array The same, linked.
+	 */
+	public static function link( array $controls ): array {
+		foreach ( $controls as $key => $control ) {
+			if ( 'range' !== $control['type'] || ! preg_match( '/^(.+\|[a-z]+)-opacity$/', $key, $m ) ) {
+				continue;
+			}
+			$color_key = $m[1] . '-color';
+			if ( 'color' !== ( $controls[ $color_key ]['type'] ?? '' ) || 0.0 !== (float) $control['min'] || 1.0 !== (float) $control['max'] ) {
+				continue;
+			}
+			$alpha = (float) $control['default'];
+			$rgb   = sscanf( $controls[ $color_key ]['default'], '#%02x%02x%02x' );
+
+			$controls[ $color_key ]['alpha_key']   = $key;
+			$controls[ $color_key ]['alpha']       = $alpha;
+			$controls[ $color_key ]['default_css'] = $alpha < 1 ? sprintf( 'rgba(%d, %d, %d, %s)', $rgb[0], $rgb[1], $rgb[2], self::number( $alpha ) ) : $controls[ $color_key ]['default'];
+			$controls[ $key ] = array_merge( $control, array( 'type' => 'alpha', 'color' => $controls[ $color_key ] ) );
+		}
+		return $controls;
+	}
+
 	/** min, max, step, unit for a slider; without a hint range the demo site's default range. */
 	private static function range( array $hint, float $scale, float $value, string $unit ): array {
 		if ( '' !== $hint[1] ) {
@@ -140,7 +169,16 @@ final class Tweaks {
 					return array( 'value' => null, 'style' => $control['attr'] . ':' . $css );
 				}
 				$color = self::sanitize( $control, $raw );
-				return null !== $color && $color !== $control['default'] ? array( 'value' => $color, 'style' => null ) : null;
+				return null !== $color && $color !== ( $control['default_css'] ?? $control['default'] ) ? array( 'value' => $color, 'style' => null ) : null;
+
+			case 'alpha':
+				$color = self::compose( $control['color'], $tune );
+				$own   = self::compose( array_merge( $control, array( 'type' => 'range' ) ), $tune );
+				// Untouched color, or a plain hex next to a value saved with the former opacity slider.
+				if ( null === $color || ( null !== $own && null !== $color['value'] && '#' === $color['value'][0] ) ) {
+					return $own;
+				}
+				return self::is_default( $control, '1' ) ? null : array( 'value' => '1', 'style' => null );
 
 			case 'range':
 				if ( ! array_key_exists( $key, $tune ) ) {
@@ -157,15 +195,17 @@ final class Tweaks {
 				return abs( $x - $control['default_x'] ) < 1e-9 && abs( $y - $control['default_y'] ) < 1e-9 ? null : array( 'value' => $value, 'style' => null );
 
 			case 'levels':
-				$given = array_intersect_key( $tune, array_flip( array( $key . '@count', '@min', '@max' ) ) );
+				// '@channels' 'each': per-channel fields '<key>@count|@min|@max'; otherwise the shared '@count|@min|@max'.
+				$prefix = 'each' === ( $tune['@channels'] ?? '' ) ? $key : '';
+				$given  = array_intersect_key( $tune, array_flip( array( $prefix . '@count', $prefix . '@min', $prefix . '@max' ) ) );
 				if ( ! $given ) {
 					// Saved by 0.1/0.2 as a plain list.
 					$value = array_key_exists( $key, $tune ) ? self::sanitize( array( 'type' => 'text' ), $tune[ $key ] ) : null;
 					return null !== $value && $value !== self::sanitize( array( 'type' => 'text' ), $control['default'] ) ? array( 'value' => $value, 'style' => null ) : null;
 				}
-				$count = self::clamp_number( $tune[ $key . '@count' ] ?? null, self::LEVELS_MIN, self::LEVELS_MAX, (float) $control['count'] );
-				$lo    = self::clamp_number( $tune['@min'] ?? null, 0.0, 1.0, $control['lo'] );
-				$hi    = self::clamp_number( $tune['@max'] ?? null, 0.0, 1.0, $control['hi'] );
+				$count = self::clamp_number( $tune[ $prefix . '@count' ] ?? null, self::LEVELS_MIN, self::LEVELS_MAX, (float) $control['count'] );
+				$lo    = self::clamp_number( $tune[ $prefix . '@min' ] ?? null, 0.0, 1.0, $control['lo'] );
+				$hi    = self::clamp_number( $tune[ $prefix . '@max' ] ?? null, 0.0, 1.0, $control['hi'] );
 				$count = (int) round( $count );
 				$list  = array();
 				for ( $i = 0; $i < $count; $i++ ) {

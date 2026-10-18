@@ -58,6 +58,51 @@ final class TweaksTest extends TestCase {
 		$this->assertSame( array( 'matrix', '-2 -1 0 -1 1 1 0 1 2' ), array( $matrix['type'], $matrix['default'] ) );
 	}
 
+	/* ---------- link(): color + opacity → one color field ---------- */
+
+	private function shadow(): array {
+		return Tweaks::link(
+			array(
+				'feFlood|flood-color'   => $this->control( '#000000', 'Shadow color', 'feFlood|flood-color' ),
+				'feFlood|flood-opacity' => $this->control( '.65', '[0, 1] Shadow opacity', 'feFlood|flood-opacity' ),
+			)
+		);
+	}
+
+	public function test_link_folds_opacity_into_the_color_field(): void {
+		$c = $this->shadow();
+
+		$this->assertSame( array( 'rgba(0, 0, 0, 0.65)', 'feFlood|flood-opacity', 0.65 ), array( $c['feFlood|flood-color']['default_css'], $c['feFlood|flood-color']['alpha_key'], $c['feFlood|flood-color']['alpha'] ) );
+		$this->assertSame( 'alpha', $c['feFlood|flood-opacity']['type'] );
+
+		$alone = Tweaks::link( array( 'x|flood-opacity' => $this->control( '.5', '[0, 1] Opacity', 'x|flood-opacity' ) ) );
+		$this->assertSame( 'range', $alone['x|flood-opacity']['type'], 'no color on the same primitive' );
+	}
+
+	/** @dataProvider alpha_cases */
+	public function test_compose_linked_color_and_opacity( array $tune, $color, $opacity ): void {
+		$c = $this->shadow();
+
+		$this->assertSame( $color, Tweaks::compose( $c['feFlood|flood-color'], $tune ), 'color' );
+		$this->assertSame( $opacity, Tweaks::compose( $c['feFlood|flood-opacity'], $tune ), 'opacity' );
+	}
+
+	public function alpha_cases(): array {
+		$v  = static function ( $value ) {
+			return array( 'value' => $value, 'style' => null );
+		};
+		$gc = '$variable({"type":"color","value":{"name":"gcid-primary-color","settings":{}}})$';
+		return array(
+			'untouched'                     => array( array(), null, null ),
+			'default as rgba'               => array( array( 'feFlood|flood-color' => 'rgba(0, 0, 0, 0.65)' ), null, null ),
+			'other alpha'                   => array( array( 'feFlood|flood-color' => 'rgba(255, 0, 0, 0.3)' ), $v( 'rgba(255, 0, 0, 0.3)' ), $v( '1' ) ),
+			'hex is fully opaque'           => array( array( 'feFlood|flood-color' => '#000000' ), $v( '#000000' ), $v( '1' ) ),
+			'global color'                  => array( array( 'feFlood|flood-color' => $gc ), array( 'value' => null, 'style' => 'flood-color:var(--gcid-primary-color)' ), $v( '1' ) ),
+			'saved slider, untouched color' => array( array( 'feFlood|flood-opacity' => '0.3' ), null, $v( '0.3' ) ),
+			'saved slider next to hex'      => array( array( 'feFlood|flood-color' => '#ff0000', 'feFlood|flood-opacity' => '0.3' ), $v( '#ff0000' ), $v( '0.3' ) ),
+		);
+	}
+
 	/* ---------- compose(): field values → attribute value / style ---------- */
 
 	/** @dataProvider compose_cases */
@@ -103,10 +148,14 @@ final class TweaksTest extends TestCase {
 			'pair one, other default'   => $c( $pair, array( 'feTurbulence|baseFrequency@y' => '0.09' ), array( 'value' => '0.008 0.09', 'style' => null ) ),
 			'pair clamped'              => $c( $pair, array( 'feTurbulence|baseFrequency@x' => '5' ), array( 'value' => '0.1 0.03', 'style' => null ) ),
 			'pair saved by 0.2 as list' => $c( $pair, array( 'feTurbulence|baseFrequency' => '0.02 0.04' ), array( 'value' => '0.02 0.04', 'style' => null ) ),
-			'levels count'              => $c( $lev, array( 'feFuncR|tableValues@count' => '3' ), array( 'value' => '0 0.5 1', 'style' => null ) ),
-			'levels shared range'       => $c( $lev, array( 'feFuncR|tableValues@count' => '3', '@min' => '0.2', '@max' => '0.8' ), array( 'value' => '0.2 0.5 0.8', 'style' => null ) ),
+			'levels all together'       => $c( $lev, array( '@count' => '3' ), array( 'value' => '0 0.5 1', 'style' => null ) ),
+			'levels all with range'     => $c( $lev, array( '@count' => '3', '@min' => '0.2', '@max' => '0.8' ), array( 'value' => '0.2 0.5 0.8', 'style' => null ) ),
 			'levels range only'         => $c( $lev, array( '@max' => '0.6' ), array( 'value' => '0 0.2 0.4 0.6', 'style' => null ) ),
-			'levels count clamped'      => $c( $lev, array( 'feFuncR|tableValues@count' => '99' ), array( 'value' => '0 0.111111 0.222222 0.333333 0.444444 0.555556 0.666667 0.777778 0.888889 1', 'style' => null ) ),
+			'levels count clamped'      => $c( $lev, array( '@count' => '99' ), array( 'value' => '0 0.111111 0.222222 0.333333 0.444444 0.555556 0.666667 0.777778 0.888889 1', 'style' => null ) ),
+			'levels each channel'       => $c( $lev, array( '@channels' => 'each', 'feFuncR|tableValues@count' => '3', 'feFuncR|tableValues@min' => '0.2', 'feFuncR|tableValues@max' => '0.8' ), array( 'value' => '0.2 0.5 0.8', 'style' => null ) ),
+			'levels each ignores shared' => $c( $lev, array( '@channels' => 'each', '@count' => '3', 'feFuncR|tableValues@max' => '0.6' ), array( 'value' => '0 0.2 0.4 0.6', 'style' => null ) ),
+			'levels each untouched'     => $c( $lev, array( '@channels' => 'each', '@count' => '3' ), null ),
+			'levels all ignores channel' => $c( $lev, array( 'feFuncR|tableValues@count' => '3' ), null ),
 			'levels untouched'          => $c( $lev, array(), null ),
 			'levels saved by 0.2'       => $c( $lev, array( 'feFuncR|tableValues' => '0 1' ), array( 'value' => '0 1', 'style' => null ) ),
 			'matrix'                    => $c( $mat, array( 'feConvolveMatrix|kernelMatrix' => '0 -1 0 -1 5 -1 0 -1 0' ), array( 'value' => '0 -1 0 -1 5 -1 0 -1 0', 'style' => null ) ),
