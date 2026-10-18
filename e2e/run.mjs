@@ -44,6 +44,15 @@ async function frontend(slug, width = 1280) {
 
 const style = (page, sel, pseudo = null) => page.locator(sel).first().evaluate((e, p) => getComputedStyle(e, p).filter, pseudo);
 
+/**
+ * Open a Divi select. Deliberate wait: its search field focuses itself 250 ms after opening and
+ * throws (Divi 5.15.1, harmless) if an option was picked before that; a person never clicks that fast.
+ */
+const open = async (page, select) => {
+  await select.click();
+  await page.waitForTimeout(300);
+};
+
 /** Visual Builder for a page; returns top page and app frame. */
 async function builder(slug) {
   const page = await context.newPage();
@@ -130,12 +139,23 @@ test('builder: fields, live preview, tuning, scope, save', async () => {
     const select = page.locator('#et-vb-module-decoration-filters--svgFilter');
     await select.scrollIntoViewIfNeeded();
 
-    await select.click();
+    // Search field (Divi's select filter): typing narrows the list across groups.
+    await open(page, select);
+    const search = select.locator('.et-vb-select-options-filter input');
+    await search.fill('gr');
+    await page.waitForTimeout(500);
+    assert.deepEqual(await select.locator('.et-vb-subgroup-title:visible').allTextContents(), ['Texture', 'Motion'], 'groups without a match are hidden');
+    await search.fill('glass');
+    await page.waitForTimeout(500);
+    assert.deepEqual(await select.locator('li[data-value^="fx-"]:visible').evaluateAll((els) => els.map((e) => e.dataset.value)), ['fx-liquid'], 'search narrows the list');
+    await search.fill('grain');
+    await page.waitForTimeout(500);
+    assert.deepEqual(await select.locator('li[data-value^="fx-"]:visible').evaluateAll((els) => els.map((e) => e.dataset.value).sort()), ['fx-grain', 'fx-grain-anim'], 'matches across groups');
     await select.locator('li[data-value="fx-grain"]').click();
     await page.waitForTimeout(800);
     assert.equal(await appStyle(0), 'url("#fx-grain") saturate(1.5) blur(1px)', 'live switch');
 
-    await select.click();
+    await open(page, select);
     await select.locator('li[data-value="fx-duotone"]').click();
     await page.waitForTimeout(800);
     // Shadow color through Divi's color field.
@@ -181,7 +201,7 @@ test('backdrop: scope and glass (builder and frontend, fallback without SVG back
     const select = page.locator('#et-vb-module-decoration-filters--svgFilter');
     await select.scrollIntoViewIfNeeded();
 
-    await select.click();
+    await open(page, select);
     await select.locator('li[data-value="fx-wave"]').click();
     await page.waitForTimeout(800);
     await page.locator('.et-vb-field-module-decoration-filters-svg-scope button[data-name="backdrop"]').click();
@@ -189,7 +209,7 @@ test('backdrop: scope and glass (builder and frontend, fallback without SVG back
     assert.equal(await backdrop(0), 'url("#fx-wave")', 'backdrop scope');
     assert.equal(await appStyle(0), 'saturate(1.5) blur(1px)', "the element keeps Divi's own filter");
 
-    await select.click();
+    await open(page, select);
     await select.locator('li[data-value="fx-liquid"]').click();
     await page.waitForTimeout(800);
     assert.equal(await backdrop(0), 'url("#fx-liquid")', 'glass is a backdrop');
@@ -225,7 +245,7 @@ test('builder: presets, levels, global colors (builder and frontend)', async () 
     const choose = async (filterId) => {
       const select = page.locator('#et-vb-module-decoration-filters--svgFilter');
       await select.scrollIntoViewIfNeeded();
-      await select.click();
+      await open(page, select);
       await select.locator(`li[data-value="${filterId}"]`).click();
       await page.waitForTimeout(900);
     };

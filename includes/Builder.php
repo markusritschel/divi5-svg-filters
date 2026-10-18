@@ -94,6 +94,7 @@ final class Builder {
 			'glass'       => Frontend::GLASS_FALLBACK,
 			'i18n'        => array(
 				'svgFilter' => __( 'SVG Filter', 'divi5-svg-filters' ),
+				'search'    => __( 'Search filters', 'divi5-svg-filters' ),
 				'none'      => __( 'None', 'divi5-svg-filters' ),
 				'applyTo'   => __( 'Apply to', 'divi5-svg-filters' ),
 				'element'   => __( 'Element', 'divi5-svg-filters' ),

@@ -120,3 +120,8 @@
   render and Divi has no backdrop values, so Divi's Backdrop Blur never
   stacks with it. An old kit without metadata cannot mark glass, so
   `fx-liquid` stays out of `Registry::from_ids()`.
+- 2026-10-18, filter search (0.9.0): Divi's `divi/select` has a built-in
+  search (`searchable`, `searchPlaceholder`). Its text field focuses itself
+  250 ms after opening and throws a harmless TypeError if an option was
+  picked earlier (Divi 5.15.1 bug, same in the font list); the browser
+  tests wait 300 ms after opening a select.

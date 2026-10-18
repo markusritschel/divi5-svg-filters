@@ -312,7 +312,12 @@
           component: {
             type: "field",
             name: "divi/select",
-            props: { options: selectOptions },
+            // Divi's own search field (as in the font select).
+            props: {
+              options: selectOptions,
+              searchable: true,
+              searchPlaceholder: I.search,
+            },
           },
         });
         out.svgScope = Object.assign({}, common, {

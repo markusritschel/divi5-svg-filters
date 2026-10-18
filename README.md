@@ -34,7 +34,7 @@ _Blend_ you find:
 
 - **SVG Filter** — the kit's filters by category (Color, Texture, Blur &
   distortion, Shape, Light & depth, Fill & compositing, Motion, Glass) and
-  your uploads under _Custom_.
+  your uploads under _Custom_, with a search field as in Divi's font list.
 - **Apply to** — _Element_ (the whole element, combined with Divi's filters),
   _Background only_ (a filtered copy of the background behind the content;
   Divi's own filters stay on the element) or _Backdrop_ (what shows through

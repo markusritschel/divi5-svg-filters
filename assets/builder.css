@@ -7,6 +7,11 @@
   padding-top: 16px;
 }
 
+/* Search in the SVG Filter select: hide groups without a match (only our groups). */
+.et-vb-option-subgroup:has(> .et-vb-subgroup-title[data-value^="d5svgf-group-"]):has(> ul:empty) {
+  display: none;
+}
+
 /* "Tune ‹filter›" heading with presets and reset. */
 .d5svgf-tune-head__row {
   display: flex;
