@@ -122,7 +122,7 @@ values do, and without having to know SVG? Open for Markus's veto.
 | Emboss | 3×3 kernel | Kernel grid, presets with previews | Fits: presets cover the common kernels, the grid stays for experts. |
 | Inner shadow | Inset shadow on text | Softness, offsets (px), color with opacity, presets | Fits; one opacity instead of two (0.5). |
 | Texture fill | Noise texture inside text | Vein frequency pad, Pattern variant, Vein/Base color, presets | Colors were fixed (multicolor matrix); now two colors with presets (0.7, look changes). |
-| Flowing water, Hue cycle | Animations | Flow/cycle time (s), Distortion strength (px) | Fits. |
+| Flowing water, Hue cycle | Animations | Flow cycle length / Cycle time (s), Distortion strength (px) | Fits; Markus approved the controls (2026-10-18), *Flow cycle length* renamed at his request. |
 | Hover melt | Melts on hover | Melt frequency pad | Fits; the hover strength (45) lives in the kit's script, not tunable (limitation). |
 | Pointer light | Light follows the pointer | Light color, Surface bumpiness, Light height (px) | Fits. |
 | Refractive glass | Glass pane | — | Not offered in the plugin (category `glass`). |
