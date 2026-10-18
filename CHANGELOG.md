@@ -4,6 +4,13 @@ All notable changes to SVG Filters for Divi 5. Versions follow
 [Semantic Versioning](https://semver.org/); release tags are `vX.Y.Z` and
 must match `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`.
 
+## [0.9.0]
+
+### Added
+
+- Search field in the *SVG Filter* select (Divi's own, as in the font
+  list); groups without a match are hidden while searching.
+
 ## [0.8.1]
 
 ### Fixed
