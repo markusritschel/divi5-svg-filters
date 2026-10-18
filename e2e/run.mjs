@@ -167,6 +167,51 @@ test('builder: fields, live preview, tuning, scope, save', async () => {
   }
 });
 
+test('backdrop: scope and glass (builder and frontend, fallback without SVG backdrops)', async () => {
+  const vb = await builder('e2e-filters');
+  try {
+    const { page, app, appStyle } = vb;
+    const backdrop = (i) => app.evaluate(([sel, i]) => getComputedStyle(document.querySelectorAll(sel)[i]).backdropFilter, [MOD, i]);
+    await app.locator(MOD).nth(0).click();
+    await page.waitForTimeout(1500);
+    await page.getByRole('tab', { name: 'Design' }).or(page.locator('text=Design')).first().click();
+    await page.waitForTimeout(800);
+    await page.locator('text=Filters').first().click();
+    await page.waitForTimeout(1000);
+    const select = page.locator('#et-vb-module-decoration-filters--svgFilter');
+    await select.scrollIntoViewIfNeeded();
+
+    await select.click();
+    await select.locator('li[data-value="fx-wave"]').click();
+    await page.waitForTimeout(800);
+    await page.locator('.et-vb-field-module-decoration-filters-svg-scope button[data-name="backdrop"]').click();
+    await page.waitForTimeout(800);
+    assert.equal(await backdrop(0), 'url("#fx-wave")', 'backdrop scope');
+    assert.equal(await appStyle(0), 'saturate(1.5) blur(1px)', "the element keeps Divi's own filter");
+
+    await select.click();
+    await select.locator('li[data-value="fx-liquid"]').click();
+    await page.waitForTimeout(800);
+    assert.equal(await backdrop(0), 'url("#fx-liquid")', 'glass is a backdrop');
+    assert.equal(await page.locator('.et-vb-field-module-decoration-filters-svg-scope').count(), 0, 'no Apply to for glass');
+    assert.ok(await page.locator('.d5svgf-tune-head__note').isVisible(), 'glass note');
+
+    await page.locator('button:has-text("Save")').first().click();
+    await page.waitForTimeout(6000);
+    assert.deepEqual(vb.errors, []);
+
+    const fe = await frontend('e2e-filters');
+    const bd = () => fe.page.locator('.et_pb_text_0').evaluate((e) => getComputedStyle(e).backdropFilter);
+    assert.equal(await bd(), 'url("#fx-liquid")', 'refraction where SVG backdrops render');
+    await fe.page.evaluate(() => document.documentElement.classList.remove('svgf-backdrop-url'));
+    assert.equal(await bd(), 'blur(6px) saturate(1.4)', 'frosted fallback elsewhere');
+    await fe.page.close();
+  } finally {
+    await vb.page.close();
+    resetPage('e2e-filters');
+  }
+});
+
 test('builder: presets, levels, global colors (builder and frontend)', async () => {
   const vb = await builder('e2e-filters');
   try {

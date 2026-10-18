@@ -35,6 +35,13 @@
   cursor: pointer;
 }
 
+.d5svgf-tune-head__note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+
 .d5svgf-presets {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));

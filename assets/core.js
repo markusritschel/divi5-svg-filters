@@ -263,9 +263,10 @@
    *   copy(id, tune, salt): {id} of a tuned/instance copy, or null for the shared filter
    *   interactive: filter ID => kind ('spotlight', 'melt')
    *   functions: Divi filter function keys (hueRotate, saturate, …)
+   *   backdrop(id): glass filter (always a backdrop)?
    * @return {{chunks: Array, missing: string[], interactive: Array|null}}
    *   chunk.kind: 'element' (url + Divi values), 'divi' (Divi values restated),
-   *   'none' (filter:none), 'background'
+   *   'none' (filter:none), 'background', 'backdrop' (with glass: frosted fallback)
    */
   function plan(args) {
     var chunks = [],
@@ -346,6 +347,21 @@
         if (kind && !layer.shared && element === "module")
           interactive = [kind, filterId];
 
+        var glass = !!(args.backdrop && args.backdrop(svg));
+        if (glass || value.svgScope === "backdrop") {
+          // Like background: the element's own filter stays Divi's.
+          chunks.push({
+            kind: "backdrop",
+            selector: selector,
+            filters: filters,
+            filterId: filterId,
+            glass: glass,
+          });
+          if (state.covered) chunks.push(withoutSvg(state, filters, own, selector));
+          state.carry = null;
+          if (own) state.last = filters;
+          return;
+        }
         if (value.svgScope === "background") {
           chunks.push({
             kind: "background",

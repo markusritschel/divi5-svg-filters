@@ -132,9 +132,9 @@ test('copyId is stable and depends on values and salt', () => {
 
 const templates = { module: '{{selector}}', content: '{{selector}} .et_pb_text_inner' };
 const filters = (value, more = {}) => ({ module: { decoration: { filters: { desktop: { value, ...more } } } } });
-const has = (id) => ['fx-wave', 'fx-duotone', 'fx-spotlight'].includes(id);
+const has = (id) => ['fx-wave', 'fx-duotone', 'fx-spotlight', 'fx-liquid'].includes(id);
 const copy = (id, tune, salt) => (salt || (tune && Object.keys(tune).length) ? { id: `${id}--copy${salt ? '-' + salt : ''}` } : null);
-const plan = (layers) => core.plan({ layers, templates, has, copy, interactive: { 'fx-spotlight': 'spotlight' }, functions: ['hueRotate', 'saturate', 'brightness', 'contrast', 'invert', 'sepia', 'opacity', 'blur'] });
+const plan = (layers) => core.plan({ layers, templates, has, copy, backdrop: (id) => id === 'fx-liquid', interactive: { 'fx-spotlight': 'spotlight' }, functions: ['hueRotate', 'saturate', 'brightness', 'contrast', 'invert', 'sepia', 'opacity', 'blur'] });
 
 test('plan: element rule with raised selector, sub-elements, none and missing', () => {
   const p = plan([{ cls: 'm1', attrs: {
@@ -169,6 +169,20 @@ test('plan: background scope, interactive, later layers restated', () => {
 
   const plain = plan([{ cls: 'p1', shared: true, attrs: filters({ sepia: '40%' }) }, { cls: 'm1', attrs: filters({ blur: '3px' }) }]);
   assert.equal(plain.chunks.length, 0, 'nothing of ours, nothing restated');
+});
+
+test('plan: backdrop scope; glass is always a backdrop', () => {
+  const wave = plan([{ cls: 'm1', attrs: filters({ svgFilter: 'fx-wave', svgScope: 'backdrop', blur: '1px' }) }]);
+  assert.deepEqual(wave.chunks.map((c) => [c.kind, c.selector, c.filterId, c.glass]), [['backdrop', '.m1.m1', 'fx-wave', false]]);
+
+  const glass = plan([{ cls: 'm1', attrs: filters({ svgFilter: 'fx-liquid', svgScope: 'element' }) }]);
+  assert.deepEqual(glass.chunks.map((c) => [c.kind, c.glass]), [['backdrop', true]]);
+
+  const later = plan([
+    { cls: 'p1', shared: true, attrs: filters({ svgFilter: 'fx-wave' }) },
+    { cls: 'm1', attrs: filters({ svgFilter: 'fx-liquid' }) },
+  ]);
+  assert.deepEqual(later.chunks.map((c) => c.kind), ['element', 'backdrop', 'none'], "the preset's element filter is switched off, as for background scope");
 });
 
 test('plan: a layer can raise its selector further (builder: module above shared preset rules)', () => {

@@ -2,7 +2,8 @@
  * SVG Filters for Divi 5 — Visual Builder (app window).
  *
  * 1. Fields below "Blend" in every Filters group: SVG Filter (grouped select),
- *    Apply to (element / background only), a "Tune ‹filter›" heading with
+ *    Apply to (element / background only / backdrop; glass is always a
+ *    backdrop), a "Tune ‹filter›" heading with
  *    presets and reset, and the filter's tuning values as real Divi fields
  *    (range with unit, color picker with global colors, text, a 3×3 matrix).
  *    They write svgTune[<filter id>][<field key>] (see includes/Tweaks.php).
@@ -317,9 +318,12 @@
         out.svgScope = Object.assign({}, common, {
           subName: "svgScope",
           label: I.applyTo,
+          description: I.scopeDesc,
           defaultAttr: { desktop: { value: { svgScope: "element" } } },
           visible: function (e) {
-            return !!filterOf(e && e.attr);
+            // Glass is always a backdrop.
+            var id = filterOf(e && e.attr);
+            return !!id && !D.filters[id].backdrop;
           },
           component: {
             type: "field",
@@ -328,6 +332,7 @@
               options: {
                 element: { label: I.element },
                 background: { label: I.bg },
+                backdrop: { label: I.backdropScope },
               },
               showLabel: true,
               fullwidth: true,
@@ -428,6 +433,9 @@
             : null,
         ),
       ),
+      filter.backdrop
+        ? h("p", { className: "d5svgf-tune-head__note" }, I.glassNote)
+        : null,
       names.length
         ? h(
             "div",
@@ -771,6 +779,16 @@
 
   /* ---------- 2. Live preview ---------- */
 
+  // Backdrop scope: mark browsers that render SVG backdrops, as the kit's script does on the frontend.
+  var brands =
+    (navigator.userAgentData && navigator.userAgentData.brands) || [];
+  if (
+    brands.some(function (b) {
+      return /Chromium/i.test(b.brand);
+    })
+  )
+    document.documentElement.classList.add("svgf-backdrop-url");
+
   var defs = null;
 
   function defsHost() {
@@ -848,20 +866,49 @@
   /** Declaration: url(#id) (if any) in front of Divi's resolved filter functions. */
   function declaration(filterId) {
     return function (p) {
-      var resolved =
-        divi.moduleUtils.getAttrValue({
-          attr: p.attr || {},
-          breakpoint: p.breakpoint || "desktop",
-          state: p.state || "value",
-          mode: "getAndInheritAll",
-          defaultValue: p.attrValue || {},
-        }) || {};
       var parts = filterId ? ["url(#" + filterId + ")"] : [];
-      Object.keys(D.functions).forEach(function (k) {
-        if (resolved[k]) parts.push(D.functions[k] + "(" + resolved[k] + ")");
-      });
+      var divi = functions(p, D.functions);
+      if (divi) parts.push(divi);
       return parts.length ? "filter:" + parts.join(" ") + ";" : "";
     };
+  }
+
+  /**
+   * backdrop-filter declaration (as Frontend::backdrop_rules): url(#id) in front of Divi's backdrop
+   * functions, or for glass's fallback rule the kit's frosted look when Divi has none.
+   */
+  function backdropDeclaration(filterId, fallback) {
+    return function (p) {
+      var divi = functions(p, D.backdrop);
+      var value = fallback
+        ? divi
+          ? ""
+          : D.glass
+        : ("url(#" + filterId + ") " + divi).trim();
+      return value
+        ? "backdrop-filter:" + value + ";-webkit-backdrop-filter:" + value + ";"
+        : "";
+    };
+  }
+
+  /** Divi's resolved values of a Filters attribute as CSS functions from a key => function map. */
+  function functions(p, map) {
+    var resolved =
+      divi.moduleUtils.getAttrValue({
+        attr: p.attr || {},
+        breakpoint: p.breakpoint || "desktop",
+        state: p.state || "value",
+        mode: "getAndInheritAll",
+        defaultValue: p.attrValue || {},
+      }) || {};
+    return Object.keys(map)
+      .filter(function (k) {
+        return !!resolved[k];
+      })
+      .map(function (k) {
+        return map[k] + "(" + resolved[k] + ")";
+      })
+      .join(" ");
   }
 
   /**
@@ -936,6 +983,9 @@
           copy: copy,
           interactive: D.interactive,
           functions: Object.keys(D.functions),
+          backdrop: function (id) {
+            return !!D.filters[id].backdrop;
+          },
         });
         if (plan.missing.length)
           warn("filter not found, not applied: " + plan.missing.join(", "));
@@ -945,6 +995,23 @@
         var rules = plan.chunks.map(function (c, i) {
           if (c.kind === "background")
             return core.backgroundCss(c.selector, c.filterId, c.base, D.edge);
+          if (c.kind === "backdrop") {
+            var backdrop = function (prefix, fallback) {
+              return h(StyleStatements, {
+                key: i + prefix,
+                selectors: { desktop: { value: prefix + c.selector } },
+                attr: c.filters,
+                orderClass: "." + order,
+                declarationFunction: backdropDeclaration(c.filterId, fallback),
+              });
+            };
+            return h(
+              React.Fragment,
+              { key: i },
+              backdrop(".svgf-backdrop-url ", false),
+              c.glass ? backdrop("html:not(.svgf-backdrop-url) ", true) : null,
+            );
+          }
           if (c.kind === "none") return c.selector + "{filter:none}";
           return h(StyleStatements, {
             key: i,

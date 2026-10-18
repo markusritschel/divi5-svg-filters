@@ -77,6 +77,7 @@ final class Builder {
 		foreach ( $registry->all() as $id => $entry ) {
 			$filters[ $id ] = array(
 				'label'    => $entry['label'],
+				'backdrop' => $entry['backdrop'],
 				'controls' => array_values( $entry['controls'] ),
 				'presets'  => (object) $entry['presets'], // object even when empty, for JS
 				'markup'   => $entry['markup'],
@@ -89,12 +90,17 @@ final class Builder {
 			'interactive' => Frontend::INTERACTIVE,
 			'edge'        => Frontend::EDGE_FILTERS,
 			'functions'   => Frontend::FILTER_FUNCTIONS,
+			'backdrop'    => Frontend::BACKDROP_FUNCTIONS,
+			'glass'       => Frontend::GLASS_FALLBACK,
 			'i18n'        => array(
 				'svgFilter' => __( 'SVG Filter', 'divi5-svg-filters' ),
 				'none'      => __( 'None', 'divi5-svg-filters' ),
 				'applyTo'   => __( 'Apply to', 'divi5-svg-filters' ),
 				'element'   => __( 'Element', 'divi5-svg-filters' ),
 				'bg'        => __( 'Background only', 'divi5-svg-filters' ),
+				'backdropScope' => __( 'Backdrop', 'divi5-svg-filters' ),
+				'scopeDesc' => __( 'Element: the element itself. Background only: a filtered copy of its background behind the content. Backdrop: what shows through the element (give it a semi-transparent background); SVG backdrops render in Chrome, Edge and other Chromium browsers.', 'divi5-svg-filters' ),
+				'glassNote' => __( 'Refracts what shows through the element: give it a semi-transparent background, e.g. with a border and shadow for a pane. Browsers that cannot render SVG backdrops show frosted glass instead (or your Backdrop values).', 'divi5-svg-filters' ),
 				/* translators: %s: filter name */
 				'tune'      => __( 'Tune %s', 'divi5-svg-filters' ),
 				'reset'     => __( 'Reset all', 'divi5-svg-filters' ),

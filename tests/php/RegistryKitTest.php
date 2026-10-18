@@ -18,11 +18,11 @@ final class RegistryKitTest extends TestCase {
 		return Registry::from_kit();
 	}
 
-	public function test_every_kit_filter_except_glass_is_listed_with_a_title(): void {
+	public function test_every_kit_filter_is_listed_with_a_title(): void {
 		$r = $this->registry();
 
-		$this->assertSame( 22, count( $r->all() ), '23 kit filters minus fx-liquid' );
-		$this->assertFalse( $r->has( 'fx-liquid' ) );
+		$this->assertSame( 23, count( $r->all() ) );
+		$this->assertTrue( $r->all()['fx-liquid']['backdrop'], 'glass works on the backdrop' );
 		foreach ( $r->all() as $id => $entry ) {
 			$this->assertNotSame( $id, $entry['label'], "{$id} has a title" );
 			$this->assertNotSame( 'Custom', $entry['group'], "{$id} has a known category" );
