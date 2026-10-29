@@ -3,13 +3,15 @@
 WordPress plugin that brings the SVG Filter Kit
 ([wp-svg-filters](https://github.com/markusritschel/wp-svg-filters)) into
 the Divi 5 Visual Builder: an "SVG filter" section inside Divi's Filters
-option group (dropdown, Element/Background scope, tuning fields), one
-combined `filter:` declaration with Divi's own filter values, and an admin
-page for uploading custom SVG filters. Divi 5 only. Guiding rule: never
-break a page; if anything is missing, the SVG filter silently does not apply.
-Design: `docs/superpowers/specs/2026-10-16-divi5-svg-filters-design.md`;
-plan and status: `docs/superpowers/plans/2026-10-16-divi5-svg-filters.md`;
-verified Divi internals: `docs/spike-findings.md`; deviations:
+option group (searchable dropdown, Element/Background/Backdrop scope, tuning
+fields), one combined `filter:` declaration with Divi's own filter values,
+and an admin page for uploading custom SVG filters. Divi 5 only. Guiding
+rule: never break a page; if anything is missing, the SVG filter silently
+does not apply. Design: `docs/superpowers/specs/2026-10-16-divi5-svg-filters-design.md`;
+tuning controls and the per-filter review:
+`docs/superpowers/specs/2026-10-17-tuning-controls-design.md`; plan and
+status: `docs/superpowers/plans/2026-10-16-divi5-svg-filters.md`; verified
+Divi internals: `docs/spike-findings.md`; deviations:
 `implementation-notes.md`. User docs: `README.md`.
 
 ## Commands
@@ -24,18 +26,31 @@ docker run --rm -u 1000:1000 -v "$PWD":/app -w /app php:7.4-cli php vendor/bin/p
 node --test tests/js/*.test.mjs
 php kit/tests/loader-test.php
 
-# Browser tests: local WordPress + Divi 5 in Docker (port 8086), never in CI
-./e2e/setup.sh ~/Projekte/webdesign/Divi/Divi.zip
+# Browser tests: local WordPress + Divi 5 in Docker (port 8086), never in CI.
+# The environment mounts the checkout it is started from as the plugin.
+./e2e/setup.sh ~/Projekte/webdesign/Divi/Divi.zip   # create or start; resets the test pages
 cd e2e && pnpm install && CHROMIUM_PATH=/usr/bin/chromium pnpm test
-docker compose -f e2e/docker-compose.yml down -v   # throw the environment away
+export DIVI_THEME_DIR=~/.cache/d5svgf-e2e/Divi       # compose needs it for every command
+docker compose -f e2e/docker-compose.yml stop        # pause, keep the site
+docker compose -f e2e/docker-compose.yml down -v     # throw the environment away
 
 # Update the bundled kit to a kit release tag
 git subtree pull --prefix=kit https://github.com/markusritschel/wp-svg-filters.git vX.Y.Z --squash
 ```
 
+New filters, hints, presets and labels belong in the kit repo, never in
+`kit/` here: change the kit, release a tag there, then pull it with the
+subtree command above. The plugin needs no code for a new filter (group,
+label, controls and presets come from the kit's metadata); only a new kind
+of control does.
+
 Releases: bump `Version` and `D5SVGF_VERSION` in `divi5-svg-filters.php`,
-tag `vX.Y.Z`, push the tag; `.github/workflows/release.yml` builds the zip
-(with the runtime `vendor/` for updates) and attaches it to the release.
+update `CHANGELOG.md`, tag `vX.Y.Z`, push the tag;
+`.github/workflows/release.yml` builds the zip (with the runtime `vendor/`
+for updates) and attaches it to the release. A release tagged on a PR
+branch only reaches `main`'s history with "Create a merge commit" (rebase or
+squash merges leave the tag outside `main` and cause conflicts later); with
+a kit change, merge the kit PR first.
 
 The Divi theme is licensed: never copy it, its zip, or extracted code into
 this repo or CI. `e2e/setup.sh` unpacks it to `~/.cache/d5svgf-e2e`.
@@ -68,34 +83,40 @@ functions", so breakpoints, hover and sticky match Divi. Selectors are
 Divi's prefix + the order/preset class doubled + the module.json element
 selector; later layers with Divi values are restated so their Divi values
 still win as in Divi, while the nearest earlier SVG filter carries over
-unless a layer sets its own or `none` (Markus's decision, 0.2.0). Scope _Backdrop_ (and glass, always) writes `backdrop-filter: url(#id) +
-Divi's backdrop functions` under `.svgf-backdrop-url` (set by the kit's
-script in Chromium; the builder sets it itself), glass also the kit's
-frosted fallback under `html:not(.svgf-backdrop-url)` where Divi has no
-backdrop values. Copies go
-into the kit's defs via `svgf_extra_defs`; rules
-print in `wp_footer` after the defs, copy rules only if the defs included
-them. Unknown filters: no rule, console warning, option `d5svgf_missing`.
+unless a layer sets its own or `none` (Markus's decision, 0.2.0). Scope
+_Backdrop_ (and glass, always) writes `backdrop-filter: url(#id) + Divi's
+backdrop functions` under `.svgf-backdrop-url` (set by the kit's script in
+Chromium; the builder sets it itself), glass also the kit's frosted
+fallback under `html:not(.svgf-backdrop-url)` where Divi has no backdrop
+values. Copies go into the kit's defs via `svgf_extra_defs`; rules print in
+`wp_footer` after the defs, copy rules only if the defs included them.
+Unknown filters: no rule, console warning, option `d5svgf_missing`.
 
 **Builder.** `Builder` registers `assets/core.js` (pure logic mirroring
 `Tweaks`/`Frontend`, with `window.D5SVGF` data inline) and
 `assets/builder.js` for Divi's app iframe, `assets/builder.css` for the
 top-window panel. `builder.js` adds the fields through
-`divi.module.options.filters.group.fields`, registers its own field
-components (`d5svgf/tune-head` with presets and swap, `d5svgf/matrix`,
-`d5svgf/pad`, `d5svgf/dial`; pad and dial keep keyboard focus in a hidden
-input because Divi's shortcuts take arrow keys from anything else) and renders a `<style>` next to
-each module through `divi.module.wrapper.render`, using Divi's
-`StyleStatements`, the module's own attrs from the edit-post store and
-selector templates from the module-library store.
+`divi.module.options.filters.group.fields` (the filter dropdown is Divi's
+`divi/select` with `searchable`), registers its own field components
+(`d5svgf/tune-head` with presets and swap, `d5svgf/matrix`, `d5svgf/pad`,
+`d5svgf/dial`; pad and dial keep keyboard focus in a hidden input because
+Divi's shortcuts take arrow keys from anything else) and renders a
+`<style>` next to each module through `divi.module.wrapper.render`, using
+Divi's `StyleStatements`, the module's own attrs from the edit-post store
+and selector templates from the module-library store.
 
 **Uploads.** `Admin` (Tools → SVG Filters) reads uploaded files from the
 request, `Sanitizer` rebuilds each `<filter>` from an allow-list, `Uploads`
 stores them in the option `d5svgf_uploads`.
 
 Stored per Filters attribute: `desktop.value.{ svgFilter, svgScope:
-'element'|'background', svgTune: { <filter id>: { '<primitive>|<attr>':
-value } } }`. Tests: `tests/php` (PHPUnit 9.6 with own WordPress stubs and
+'element'|'background'|'backdrop', svgTune: { <filter id>: { <field key>:
+value } } }`. Field keys are the kit's tweak keys (`<primitive>|<attr>`)
+plus suffixes for split controls (`@x`/`@y`, `@count`/`@min`/`@max`,
+`@channels`); values may carry units (`"40px"`) or a global color
+(`$variable(…)$`). See the header of `includes/Tweaks.php`. Tweak keys are
+saved data: renaming or reordering primitives in the kit breaks saved
+tunings. Tests: `tests/php` (PHPUnit 9.6 with own WordPress stubs and
 Divi fakes), `tests/js` (`node --test`), `e2e/` (Playwright, real Divi).
 
 Code style: WordPress PHP style, PHP 7.4 compatible (no `str_contains`,
@@ -105,13 +126,19 @@ union types, `match`), namespace `D5SVGF`, one class per file in
 
 ## Known Limitations & Improvements
 
-- [high] Not published yet: the GitHub repo, kit v1.3.0 release and the
-  first plugin release need Markus's go; updates are untested end to end
-  until then.
+- [medium] Automatic updates from GitHub releases (Plugin Update Checker)
+  are not tested end to end: 0.1.0 was installed from its release zip, an
+  update offer and install have not been verified; the browser tests use
+  the checkout, not a release zip.
 - [medium] Option-group presets: frontend only, not in the builder preview;
   saving them through Divi's preset UI is not covered by the e2e tests.
 - [medium] Divi API: `Frontend::FILTER_FUNCTIONS` copies Divi 5.15.1's map;
   rerun `e2e/` after Divi updates.
+- [low] SVG filters as a backdrop render in Chromium browsers only;
+  elsewhere only Divi's backdrop values apply (glass: the kit's frosted look).
+- [low] Divi 5.15.1: the select's search field focuses itself 250 ms after
+  opening and throws a harmless TypeError if an option was picked sooner;
+  the browser tests wait 300 ms after opening a select.
 - [low] Pointer filters set through a preset share one light per preset.
 - [low] Module elements whose Filters use a selector that is not a plain
   `{{selector}} …` string in module.json are skipped.
