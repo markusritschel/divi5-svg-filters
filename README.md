@@ -1,4 +1,12 @@
-# SVG Filters for Divi 5
+<h1 align="center">SVG Filters for Divi 5</h1>
+
+<p align="center">
+  <a href="https://github.com/markusritschel/divi5-svg-filters/actions/workflows/ci.yml"><img src="https://github.com/markusritschel/divi5-svg-filters/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI workflow status" /></a>
+  <a href="https://github.com/markusritschel/divi5-svg-filters/actions/workflows/release.yml"><img src="https://github.com/markusritschel/divi5-svg-filters/actions/workflows/release.yml/badge.svg" alt="Release workflow status" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0--or--later-blue" alt="License: GPL-2.0-or-later" /></a>
+</p>
+
+---
 
 Brings the [SVG Filter Kit](https://github.com/markusritschel/wp-svg-filters)
 ([demo](https://markusritschel.github.io/wp-svg-filters/)) into the Divi 5
