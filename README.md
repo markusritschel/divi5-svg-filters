@@ -14,6 +14,11 @@ Visual Builder. Pick an SVG filter for any section, row, column, module or
 sub-element, apply it to the whole element or only its background, tune its
 values per element, and upload your own SVG filters.
 
+<p align="center">
+  <img src="docs/screenshots/filters.png" width="828" alt="One photo of a flower meadow six times: the original, and with the kit's Duotone, Emboss, Paper relief, Posterize and Pointer light filters" /><br>
+  <sub>Photo: Flower meadow in Llano, Texas (public domain, CC0, via rawpixel.com; ships with WordPress's Twenty Twenty-Five theme).</sub>
+</p>
+
 The SVG filter is combined with Divi's own Filters settings (hue, saturate,
 blur, …) in one `filter:` declaration, so neither overrides the other, on
 every breakpoint and on hover.
@@ -63,6 +68,26 @@ _Blend_ you find:
   exchanges the two colors of Duotone, Threshold and Texture fill; *Reset all* returns to the filter's
   defaults. Tuned elements get their own copy of the filter; untuned
   ones share the standard one.
+
+<p align="center">
+  <img src="docs/screenshots/builder-svg-filter.png" width="280" alt="Builder sidebar, end of Design > Filters: SVG Filter select (Duotone), Apply To tiles (Element, Background only, Backdrop), Tune Duotone with six color presets, Shadow Color and Highlight Color" />
+</p>
+
+The filters in the **SVG Filter** list (what each one does and what it suits:
+the kit's [filter table](kit/README.md#included-filters); all of them live on
+the [demo site](https://markusritschel.github.io/wp-svg-filters/)):
+
+| Category           | Filters                                                           |
+| ------------------ | ----------------------------------------------------------------- |
+| Color              | Duotone, Posterize, Threshold, Color tint                         |
+| Texture            | Film grain, Paper relief                                          |
+| Blur & distortion  | Soft blur, Solid-edge blur, RGB glitch, Rough edges, Water wave   |
+| Shape              | Gooey merge, Outline only                                         |
+| Light & depth      | Bevel, Emboss, Inner shadow                                       |
+| Fill & compositing | Texture fill                                                      |
+| Motion             | Living grain, Hue cycle, Hover melt, Pointer light, Flowing water |
+| Glass              | Refractive glass                                                  |
+| Custom             | Your own uploads (see [Your own filters](#your-own-filters))      |
 
 Sub-elements (e.g. a Text module's text) get the same fields when you enable
 _Filters_ for them through Divi's _Toggle Options_. The SVG filter setting is
