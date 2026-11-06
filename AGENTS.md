@@ -30,6 +30,7 @@ php kit/tests/loader-test.php
 # The environment mounts the checkout it is started from as the plugin.
 ./e2e/setup.sh ~/Projekte/webdesign/Divi/Divi.zip   # create or start; resets the test pages
 cd e2e && pnpm install && CHROMIUM_PATH=/usr/bin/chromium pnpm test
+cd e2e && CHROMIUM_PATH=/usr/bin/chromium node capture.mjs   # README images -> docs/screenshots/ (~1 min; needs ffmpeg)
 export DIVI_THEME_DIR=~/.cache/d5svgf-e2e/Divi       # compose needs it for every command
 docker compose -f e2e/docker-compose.yml stop        # pause, keep the site
 docker compose -f e2e/docker-compose.yml down -v     # throw the environment away
